@@ -1,11 +1,11 @@
 var webdriver = require('selenium-webdriver');
 var genHelper = require('./webdriver-helper');
+var taskQueue = require('./TasksQueue');
 var driver = new webdriver.Builder().
-    withCapabilities(webdriver.Capabilities.firefox()).
+    withCapabilities(webdriver.Capabilities.chrome()).
     build();
 var helper = genHelper(webdriver, driver);
 var flow = webdriver.promise.controlFlow();
-
 driver.get('https://wx.qq.com');
 //driver.findElement(webdriver.By.name('q')).sendKeys('webdriver');
 //driver.findElement(webdriver.By.name('btnK')).click();
@@ -18,9 +18,12 @@ var searchedContactLocator = webdriver.By.css(' div[data-height-calc=heightCalc]
 var waitFor = function(seconds) {
     var delay = seconds*1000;
     var timeout = false;
-    setTimeout(function(){timeout = true;}, delay);
     return function(){
-        driver.wait(function() {return timeout;}, 100000);
+        driver.wait(function() {
+            console.log("-------")
+            setTimeout(function(){timeout=true}, delay);
+            return timeout;
+        }, 100000);
     };
 };
 
@@ -40,9 +43,17 @@ driver.wait(function() {
 
 
 
-var nickname = 'Rupert';
+var nickname = '独自等待';
 driver.findElement(searchLocator).sendKeys(nickname);
-waitFor(5)();
+//var result =false;
+//driver.wait(function(){
+//    setTimeout(function(){
+//        result = true;
+//    }, 5000)
+//    return result;
+//}, 100000)
+waitFor(1)();
+
 //driver.findElements(searchedContactLocator).click();
 //var findContactByNickname = function(nickname){
 //    return helper.findElementInCollectionByText({
@@ -53,8 +64,6 @@ waitFor(5)();
 //        nickname
 //    );
 //};
-
-
 driver.findElements({
     'css': 'div.contact_item.on'
 }).
@@ -66,7 +75,6 @@ driver.findElements({
                 infoItem.getText().
                     then(function (value) {
                         //console.log('comparing ' + value);
-                        console.log(value);
                         if (value === nickname) {
                             contactItem.click();
                         }
@@ -76,6 +84,17 @@ driver.findElements({
         });
     });
 
+waitFor(1)();
+var sendMsg = "机器人测试";
+var sendCount = 10;
+function iterator(index){
+    if(index === sendCount)
+    return;
+    driver.findElement({'id':'editArea'}).sendKeys(sendMsg);
+    driver.findElement({css:'.btn_send'}).click();
+    iterator(index + 1)
+}
+iterator(0)
 
 
 
