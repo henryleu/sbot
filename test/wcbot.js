@@ -23,6 +23,7 @@ var waitFor = function(seconds) {
         }, 100000);
     };
 };
+var PromiseBB = require('bluebird');
 var chatCache = {};
 var currInteral = {};
 function WcBot(id){
@@ -46,6 +47,9 @@ WcBot.prototype.start = function(){
                 //        polling();
                 //    })
                 //}
+
+
+                //add property id, add queue api already in
                 return taskQueue.enqueue(self._walkChatList.bind(self), function(){
                     //count++;
                     polling();
@@ -70,7 +74,7 @@ WcBot.prototype._listenCurrUser = function(){
     var self = this;
     currInteral = setInterval(self._walkCurrList.bind(this), 200);
 }
-WcBot.prototype.send = function(json) {
+WcBot.prototype.send = function(json, callback) {
     var self = this;
     var content = json.content;
     if(!initialed || json.sendTo != self.sendTo){
@@ -81,12 +85,15 @@ WcBot.prototype.send = function(json) {
         driver.findElement({'id':'editArea'}).sendKeys(content);
         driver.findElement({css:'.btn_send'}).click().then(function(){
             chatCache[self.sendTo] = !chatCache[self.sendTo]? 1 : chatCache[self.sendTo]+1;
-            cb();
+            cb()
         });
+    }, function(){
+        callback()
     });
     initialed = true;
 }
 WcBot.prototype._login = function(callback){
+    var self = this;
     driver.get('https://wx.qq.com');
     driver.wait(function() {
         driver.isElementPresent(avatarLocator).then(function(present) {
@@ -94,13 +101,14 @@ WcBot.prototype._login = function(callback){
                 //loggedIn = present;
                 setTimeout(function(){
                     loggedIn = present;
-                    callback()
+                    self.emit('login');
                 }, 3000);
             }
         });
 
         return loggedIn;
     }, 60*1000);
+    self.once('login', callback);
 }
 WcBot.prototype._findOne = function(callback){
     var self = this;
@@ -129,6 +137,7 @@ WcBot.prototype._findOne = function(callback){
     });
 }
 WcBot.prototype._walkChatList = function(callback){
+    console.log("------------")
     var self = this;
     driver.findElements({'css': 'div[ng-repeat*="chatContact"]'})
         .then(function(collection){
@@ -142,12 +151,10 @@ WcBot.prototype._walkChatList = function(callback){
                                 self.sendTo = h3El;
                                 iblockTemp.getText().then(function(count){
                                     currItem.click().then(function(){
-                                        spiderContent()
-                                        return receiveReset(callback);
+                                        spiderContent(count, function(){
+                                            return receiveReset(callback);
+                                        })
                                     });
-                                    //replayMsg(self, count)
-
-                                    //self.emit('continue', {count: count});
                                 })
                             })
                     })
@@ -165,26 +172,34 @@ function spiderContent(unReadCount, callback){
     //walk in dom
     driver.findElement({'css': '#chatArea'})
         .then(function(chatwrapper){
-            chatwrapper.findElements({'css': '.bubble_default'}).then(function(collection){
-                var unreadArr = collection.slice(-unReadCount);
-                var unreadMsgs = [];
-                Promise.map(unreadArr, function(item, index, unreadArr){
-                    item.findElement({'css': 'pre.js_message_plain'}).then(function(preEl){
-                        preEl.getText().then(function(payLoad){
-                            //self.emit('receive', {
-                            //    from: self.sendTo,
-                            //    payLoad: payLoad
-                            //});
-                            replayMsg(self, null, callback);
-                            //return callback();
-                        })
-                    })
-                })
+            return chatwrapper.findElements({'css': '.bubble_default'})
+        })
+        .then(function(collection){
+            var unreadArr = collection.slice(-unReadCount);
+            var PromiseArr = [];
+            unreadArr.forEach(function(item){
+                PromiseArr.push(_getContentAsync(item));
             })
+            return PromiseBB.all(PromiseArr)
+        })
+        .then(function(){
+            callback()
         })
         .thenCatch(function(err){
             return callback(err);
         })
+    function _getContent(promise, callback){
+        promise.findElement({'css': 'pre.js_message_plain'}).then(function(preEl){
+            preEl.getText().then(function(payLoad){
+                self.emit('receive', {
+                    from: self.sendTo,
+                    payLoad: payLoad
+                });
+                return callback();
+            })
+        })
+    }
+    var _getContentAsync = PromiseBB.promisify(_getContent);
 }
 function receiveReset(callback){
     driver.findElement(receiveRestLocator).click().then(function(){

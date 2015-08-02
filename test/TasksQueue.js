@@ -5,21 +5,26 @@ function TaskQueue(concurrency){
 }
 TaskQueue.prototype.enqueue = function(task, callback){
     var callback = callback || function(){};
-    this.queue.push(task);
+    var taskWrapper = {
+        task: task,
+        callback: callback
+    }
+    this.queue.push(taskWrapper);
     if(!this.busy){
         this.busy = true;
-        this.next(callback);
+        this.next();
     }
 }
-TaskQueue.prototype.next = function(callback){
+TaskQueue.prototype.next = function(){
     var self = this;
-    var task = this.queue.shift();
-    task(function(){
-        if(!self.queue.length){
+    var taskWrapper = this.queue.shift();
+    taskWrapper.task(function(){
+        if(self.queue.length <= 0){
             self.busy = false
-            return callback();
+            return taskWrapper.callback();
         };
-        self.next(callback);
+        taskWrapper.callback();
+        self.next();
     });
 
 }
