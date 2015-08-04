@@ -3,13 +3,15 @@ function TaskQueue(concurrency){
     this.busy = false;
     this.concurrency = concurrency;
 }
-TaskQueue.prototype.enqueue = function(task, callback){
+TaskQueue.prototype.enqueue = function(task, options, callback){
     var callback = callback || function(){};
     var taskWrapper = {
         task: task,
-        callback: callback
+        callback: callback,
+        args: options && options.args || null,
+        context: options && options.context
     }
-    this.queue.push(taskWrapper);
+    options && options.priority && this.queue.unshift(taskWrapper) || this.queue.push(taskWrapper);
     if(!this.busy){
         this.busy = true;
         this.next();
@@ -18,14 +20,20 @@ TaskQueue.prototype.enqueue = function(task, callback){
 TaskQueue.prototype.next = function(){
     var self = this;
     var taskWrapper = this.queue.shift();
-    taskWrapper.task(function(){
+    var nextArgs = [];
+    var taskCallback = function(err, data){
         if(self.queue.length <= 0){
             self.busy = false
-            return taskWrapper.callback();
+            return taskWrapper.callback(err, data);
         };
-        taskWrapper.callback();
+        taskWrapper.callback(err, data);
         self.next();
-    });
-
+    };
+    nextArgs.push(taskCallback);
+    if(taskWrapper.args){
+        nextArgs = taskWrapper.args.concat(nextArgs);
+        return taskWrapper.task.apply(taskWrapper.context, nextArgs);
+    }
+    taskWrapper.task(taskCallback);
 }
 module.exports = new TaskQueue(1);

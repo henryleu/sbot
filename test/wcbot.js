@@ -13,16 +13,6 @@ var receiveRestLocator = webdriver.By.css('div.chat_list div.top');
 //var searchedContactLocator = webdriver.By.css('div.contact_item:');
 var searchedContactLocator = webdriver.By.css(' div[data-height-calc=heightCalc]:nth-child(2) > div');
 var blackList = {};
-var waitFor = function(seconds) {
-    var delay = seconds*1000;
-    var timeout = false;
-    return function(){
-        driver.wait(function() {
-            setTimeout(function(){timeout=true}, delay);
-            return timeout;
-        }, 100000);
-    };
-};
 var PromiseBB = require('bluebird');
 var chatCache = {};
 var currInteral = {};
@@ -41,16 +31,8 @@ WcBot.prototype.start = function(){
         function polling(){
             console.log("polling---------------")
             setTimeout(function(){
-                //if(isEven(count)){
-                //    return taskQueue.enqueue(self._walkCurrList.bind(self), function(){
-                //        count++;
-                //        polling();
-                //    })
-                //}
-
-
                 //add property id, add queue api already in
-                return taskQueue.enqueue(self._walkChatList.bind(self), function(){
+                return taskQueue.enqueue(self._walkChatList.bind(self), null, function(){
                     //count++;
                     polling();
 
@@ -67,27 +49,27 @@ function isEven(num){
     }
     throw new Error('arguments type is not a Number');
 }
-WcBot.prototype._listenChatList = function(){
-
-}
 WcBot.prototype._listenCurrUser = function(){
     var self = this;
-    currInteral = setInterval(self._walkCurrList.bind(this), 200);
+    currInteral = setInterval(self._walkCurrList.bind(self), 200);
 }
 WcBot.prototype.send = function(json, callback) {
     var self = this;
     var content = json.content;
     if(!initialed || json.sendTo != self.sendTo){
         self.sendTo = json.sendTo;
+        console.log(self.sendTo)
         taskQueue.enqueue(self._findOne.bind(self));
     }
     taskQueue.enqueue(function(cb){
         driver.findElement({'id':'editArea'}).sendKeys(content);
         driver.findElement({css:'.btn_send'}).click().then(function(){
             chatCache[self.sendTo] = !chatCache[self.sendTo]? 1 : chatCache[self.sendTo]+1;
-            cb()
+            receiveReset(function(){
+                cb()
+            })
         });
-    }, function(){
+    }, null, function(){
         callback()
     });
     initialed = true;
@@ -110,34 +92,229 @@ WcBot.prototype._login = function(callback){
     }, 60*1000);
     self.once('login', callback);
 }
+WcBot.prototype.addContact = function(id, encodeId, callback){
+    var self = this;
+    taskQueue.enqueue(_addContact.bind(self), {args:[id, encodeId], priority: 1, context: self}, function(){
+        callback();
+    });
+}
+WcBot.prototype.readProfile = function(bid, callback){
+    var self = this
+    taskQueue.enqueue(_readProfile.bind(self),{args:[bid, self], priority: 1, context:self}, callback);
+}
+function _readProfile(bid, self, callback){
+    var box;
+    _findOnePro(bid, function(){
+        driver.sleep(500)
+        driver.findElement({'css': '#chatArea>.box_hd'})
+            .then(function(boxItem){
+                box = boxItem;
+                box.findElement({'css': 'div.title_wrap>div.title.poi'})
+                    .then(function(clickbtn1){
+                        return clickbtn1.click()
+                    })
+            })
+            .then(function(){
+                box.findElement({'css': 'div#chatRoomMembersWrap div.member:nth-child(2)>img'})
+                    .then(function(clickbtn2){
+                        driver.sleep(500).then(function(){
+                            return clickbtn2.click()
+                        })
+                    })
+                    .thenCatch(function(err){
+                        console.log("err --------"+err)
+                    })
+            })
+            .then(function(){
+                _readProfileChain(function(err, data){
+                    if(err){
+                        throw new Error('Failed to read Profile Chain');
+                        return;
+                    }
+                    return callback(null, data);
+                })
+            })
+            .thenCatch(function(err){
+                console.log("readprofile err---------" + err)
+                return callback(err)
+            })
+    });
+}
+function _readProfileChain(callback){
+    var data = {},
+        pop;
+    driver.findElement({'css': 'div#mmpop_profile>div.profile_mini'})
+        .then(function(popItem){
+            pop = popItem;
+            return pop.findElement({'css': 'div.profile_mini_hd img'})
+                .then(function(headImg){
+                    return headImg.getAttribute('src')
+                })
+                .then(function(src){
+                    return data.headUrl = src;
+                })
+        })
+        .then(function(src){
+            pop.findElement({'css': 'div.profile_mini_bd>div.nickname_area h4'})
+                .then(function(h4){
+                    h4.getText()
+                        .then(function(txt){
+                            return data.nickName = txt;
+                        })
+                })
+        })
+        .then(function(){
+            pop.findElement({'css': 'div.profile_mini_bd>div.meta_area>div.meta_item:nth-child(1) p'})
+                .then(function(bidItem){
+                    return bidItem.getText()
+                })
+                .then(function(bidtxt){
+                    return data.bid = bidtxt;
+                })
+        })
+        .then(function(){
+            pop.findElement({'css': 'div.profile_mini_bd>div.meta_area>div.meta_item:nth-child(2) p'})
+                .then(function(placeItem){
+                    return placeItem.getText()
+                })
+                .then(function(placetxt){
+                    data.place = placetxt;
+                    receiveReset(function(){
+                        return callback(null, data);
+                    });
+                })
+        })
+        .thenCatch(function(err){
+            return callback(err)
+        })
+}
+function _addContact(id, encodeId, callback){
+    var nickname = id;
+    var code = encodeId;
+    _findOneInListAsync('朋友推荐消息')
+        .then(function(){
+            return _findOneInChatAysnc(nickname)
+        })
+        .then(function(){
+            return _modifyRemarkAsync(code)
+        })
+        .then(function(){
+            callback(null);
+        })
+        .thenCatch(function(err){
+            console.log('error occur ---- ' + err);
+            callback(err)
+        })
+}
+function _findOneInListAsync(id){
+    return driver.findElements({'css': 'div[ng-repeat*="chatContact"]'})
+        .then(function(collection) {
+            console.log(collection.length)
+            collection.map(function(item){
+                item.findElement({'css': 'div.chat_item >div.info >h3 >span'})
+                    .then(function(span){
+                        return span.getText();
+                    })
+                    .then(function(txt){
+                        if(txt === id){
+                            return item.click();
+                        }
+                    })
+                    .thenCatch(function(err){
+                        console.log(err)
+                    })
+            })
+        })
+}
+function _findOneInChatAysnc(id){
+    return driver.findElement({'css': '#chatArea div.card>div.card_bd>div.info>h3'})
+        .then(function(item){
+            item.getText()
+                .then(function(txt){
+                    !id && item.click();
+                    if(id && txt === id){
+                        return item.click()
+                    }
+                })
+        })
+}
+function _geneRemark(){
+    var id = 0;
+    return id++;
+}
+function _modifyRemarkAsync(codeTmp){
+    var item, code, nickName
+    if(!codeTmp){
+        code = _geneRemark();
+    }
+    return driver.findElement({'css' :'#mmpop_profile >div.profile_mini >div.profile_mini_bd'})
+        .then(function(itemtmp){
+            item = itemtmp;
+            return item.findElement({'css': 'div.nickname_area h4'})
+                .then(function(h4El){
+                    return h4El.getText()
+                })
+                .then(function(txt){
+                    return nickName = txt;
+                })
+        })
+        .then(function(){
+            return item.findElement({'css': 'div.meta_area p'})
+        })
+        .then(function(itemp){
+            return driver.sleep(200)
+                .then(function(){
+                    itemp.click()
+                        .then(function(){
+                            driver.sleep(500)
+                                .then(function(){
+                                    return itemp.sendKeys(code)
+                                })
+                        })
+                })
+        })
+        .then(function(){
+            return driver.executeScript('window.document.querySelector("#mmpop_profile >div.profile_mini >div.profile_mini_bd a").click();')
+                .then(function(){
+                    return {
+                        code: code,
+                        nickName: nickName
+                    };
+                })
+        })
+        .thenCatch(function(err){
+            console.log("Failed to modify remark [code]---------")
+            console.log(err)
+        })
+}
+
 WcBot.prototype._findOne = function(callback){
     var self = this;
-    driver.findElement(searchLocator).sendKeys(self.sendTo);
+    return _findOnePro(self.sendTo, callback)
+}
+function _findOnePro(id, callback){
+    driver.findElement(searchLocator).sendKeys(id);
     driver.sleep(1000);
     driver.findElements({
         'css': 'div.contact_item.on'
     }).
         then (function (collection) {
         collection.map(function (item) {
-            //flow.execute(function () {
             var contactItem = item;
             item.findElement({'css': 'h4.nickname'}).then(function(infoItem){
                 infoItem.getText().
                     then(function (value) {
-                        //console.log('comparing ' + value);
-                        if (value === self.sendTo) {
+                        if (value === id) {
                             contactItem.click().then(function(){
                                 callback();
                             })
                         }
                     });
             });
-            //});
         });
     });
 }
 WcBot.prototype._walkChatList = function(callback){
-    console.log("------------")
     var self = this;
     driver.findElements({'css': 'div[ng-repeat*="chatContact"]'})
         .then(function(collection){
@@ -148,14 +325,10 @@ WcBot.prototype._walkChatList = function(callback){
                         var iblockTemp = iblock;
                         item.findElement({'css': 'span.nickname_text'})
                             .then(function(h3El){
-                                self.sendTo = h3El;
-                                iblockTemp.getText().then(function(count){
-                                    currItem.click().then(function(){
-                                        spiderContent(count, function(){
-                                            return receiveReset(callback);
-                                        })
-                                    });
-                                })
+                                h3El.getText()
+                                    .then(function(txt){
+                                        return pollingDispatcher(txt)(self, iblockTemp, currItem, callback);
+                                    })
                             })
                     })
                     .thenCatch(function(){
@@ -168,7 +341,48 @@ WcBot.prototype._walkChatList = function(callback){
             return callback(err);
         })
 }
-function spiderContent(unReadCount, callback){
+
+function pollingDispatcher(input){
+    var handlers = {
+        '朋友推荐消息': function(self, item, parentItem, callback){
+            parentItem.click().then(function(){
+                return _findOneInChatAysnc()
+                    .then(function(){
+                        return _modifyRemarkAsync()
+                    })
+                    .then(function(profile){
+                        self.emit('onAddContact', {err: null, data: {bid: profile.code, nickName: profile.nickName}});
+                        driver.sleep(500).then(function(){
+                            return receiveReset(callback);
+                        })
+                    })
+                    .thenCatch(function(err){
+                        console.log("Failed to add contact----")
+                        console.log(err);
+                        callback();
+                    })
+            })
+        },
+        'defaultHandler': function(self, item, parentItem, callback){
+            self.sendTo = input;
+            item.getText()
+                .then(function(count){
+                    parentItem.click().then(function(){
+                        spiderContent(self, count, function(err, msgArr){
+                            self.emit('receive', {err: null, data: {msgArr: msgArr, bid: input}});
+                            return receiveReset(callback);
+                        })
+                    });
+                })
+                .thenCatch(function(err){
+                    console.log("Failed to receive msg [code]-----")
+                    console.log(err);
+                })
+        }
+    }
+    return handlers[input] || handlers['defaultHandler'];
+}
+function spiderContent(self, unReadCount, callback){
     //walk in dom
     driver.findElement({'css': '#chatArea'})
         .then(function(chatwrapper){
@@ -178,33 +392,49 @@ function spiderContent(unReadCount, callback){
             var unreadArr = collection.slice(-unReadCount);
             var PromiseArr = [];
             unreadArr.forEach(function(item){
-                PromiseArr.push(_getContentAsync(item));
+                PromiseArr.push(_getContentAsync(self, item));
             })
-            return PromiseBB.all(PromiseArr)
+            return PromiseBB.all(PromiseArr).then(function(arr){
+                return arr;
+            })
         })
-        .then(function(){
-            callback()
+        .then(function(msgArr){
+            return callback(null, msgArr);
         })
         .thenCatch(function(err){
+            console.log("err--------------"+err);
             return callback(err);
         })
-    function _getContent(promise, callback){
+    function _getContent(self, promise, callback){
         promise.findElement({'css': 'pre.js_message_plain'}).then(function(preEl){
             preEl.getText().then(function(payLoad){
-                self.emit('receive', {
+                var msg = {
                     from: self.sendTo,
                     payLoad: payLoad
-                });
-                return callback();
+                };
+                return callback(null, msg);
             })
         })
     }
     var _getContentAsync = PromiseBB.promisify(_getContent);
 }
 function receiveReset(callback){
-    driver.findElement(receiveRestLocator).click().then(function(){
-        callback();
-    });
+    return driver.findElement(receiveRestLocator)
+        .then(function(item){
+            console.log("-----------------------------")
+            return item.click()
+                .then(function(){
+                    item.click()
+                        .then(function(){
+                            console.log("============================")
+                            return callback()
+                        })
+                })
+        })
+        .thenCatch(function(err){
+            console.log("Failed to reset in list [code]-------")
+            console.log(err);
+        })
 }
 function replayMsg(self, count){
     //self._walkCurrList(count, callback);
@@ -214,11 +444,21 @@ WcBot.prototype._reply = function(count){
     driver.findElement({'id':'editArea'}).sendKeys("这个一个检测机器人，主人正在睡觉，请勿打扰");
     driver.findElement({css:'.btn_send'}).click();
 }
-WcBot.prototype.onReceive = function(id, handler){
-
-}
 WcBot.prototype.onReceive = function(handler){
-    this.on('receive', handler);
+    var self = this;
+    this.on('receive', function(data){
+        var err = data.err;
+        var data = data.data;
+        handler.call(self, err, data);
+    });
+}
+WcBot.prototype.onAddContact = function(handler){
+    var self = this;
+    this.on('onAddContact', function(data){
+        var err = data.err;
+        var data = data.data;
+        handler.call(self, err, data);
+    });
 }
 WcBot.prototype._walkCurrList = function(unReadCount, callback){
     if(!callback){
