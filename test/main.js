@@ -9,7 +9,6 @@ wcBot.start();
 //    console.log(data);
 //
 //})
-
 wcBot.onReceive(function(err, data){
     if(err) return console.log(err);
     return console.log(data);
@@ -18,9 +17,9 @@ wcBot.onReceive(function(err, data){
 wcBot.onAddContact(function(err, data){
     console.log(data);
 })
-//wcBot.send(json, function(){
-//    console.log("send ---ok")
-//});
+wcBot.send(json, function(){
+    console.log("send ---ok")
+});
 //
 //wcBot.addContact('独自等待', 'a123', function(){
 //    console.log("addContact ok");
