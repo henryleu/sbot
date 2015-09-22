@@ -42,7 +42,7 @@ WcBot.prototype.start = function(){
         polling();
     });
 
-}
+};
 function isEven(num){
     if(!isNaN(num)){
         return num%2 === 1;
@@ -52,7 +52,7 @@ function isEven(num){
 WcBot.prototype._listenCurrUser = function(){
     var self = this;
     currInteral = setInterval(self._walkCurrList.bind(self), 200);
-}
+};
 WcBot.prototype.send = function(json, callback) {
     var self = this;
     var content = json.content;
@@ -73,7 +73,7 @@ WcBot.prototype.send = function(json, callback) {
         callback()
     });
     initialed = true;
-}
+};
 WcBot.prototype._login = function(callback){
     var self = this;
     driver.get('https://wx.qq.com');
@@ -91,21 +91,21 @@ WcBot.prototype._login = function(callback){
         return loggedIn;
     }, 60*1000);
     self.once('login', callback);
-}
+};
 WcBot.prototype.addContact = function(id, encodeId, callback){
     var self = this;
     taskQueue.enqueue(_addContact.bind(self), {args:[id, encodeId], priority: 1, context: self}, function(){
         callback();
     });
-}
+};
 WcBot.prototype.readProfile = function(bid, callback){
-    var self = this
+    var self = this;
     taskQueue.enqueue(_readProfile.bind(self),{args:[bid, self], priority: 1, context:self}, callback);
-}
+};
 function _readProfile(bid, self, callback){
     var box;
     _findOnePro(bid, function(){
-        driver.sleep(500)
+        driver.sleep(500);
         driver.findElement({'css': '#chatArea>.box_hd'})
             .then(function(boxItem){
                 box = boxItem;
@@ -237,13 +237,16 @@ function _findOneInChatAysnc(id){
                     }
                 })
         })
+        .thenCatch(function(e){
+            console.log('Failed to findOne in chat[code]-----' + JSON.stringify(e))
+        })
 }
 function _geneRemark(){
     var id = 0;
     return id++;
 }
 function _modifyRemarkAsync(codeTmp){
-    var item, code, nickName
+    var item, code, nickName;
     if(!codeTmp){
         code = _geneRemark();
     }
@@ -265,6 +268,9 @@ function _modifyRemarkAsync(codeTmp){
             return driver.sleep(200)
                 .then(function(){
                     itemp.click()
+                        .then(function(){
+                            return itemp.click();
+                        })
                         .then(function(){
                             driver.sleep(500)
                                 .then(function(){
@@ -291,7 +297,7 @@ function _modifyRemarkAsync(codeTmp){
 WcBot.prototype._findOne = function(callback){
     var self = this;
     return _findOnePro(self.sendTo, callback)
-}
+};
 function _findOnePro(id, callback){
     driver.findElement(searchLocator).sendKeys(id);
     driver.sleep(1000);
@@ -340,12 +346,16 @@ WcBot.prototype._walkChatList = function(callback){
         .thenCatch(function(err){
             return callback(err);
         })
-}
+};
 
 function pollingDispatcher(input){
     var handlers = {
         '朋友推荐消息': function(self, item, parentItem, callback){
-            parentItem.click().then(function(){
+            parentItem.click()
+                .then(function(){
+                    return driver.sleep(500);
+                })
+                .then(function(){
                 return _findOneInChatAysnc()
                     .then(function(){
                         return _modifyRemarkAsync()
@@ -357,7 +367,7 @@ function pollingDispatcher(input){
                         })
                     })
                     .thenCatch(function(err){
-                        console.log("Failed to add contact----")
+                        console.log("Failed to add contact----");
                         console.log(err);
                         callback();
                     })
@@ -367,7 +377,11 @@ function pollingDispatcher(input){
             self.sendTo = input;
             item.getText()
                 .then(function(count){
-                    parentItem.click().then(function(){
+                    parentItem.click()
+                    .then(function(){
+                        return driver.sleep(200);
+                    })
+                    .then(function(){
                         spiderContent(self, count, function(err, msgArr){
                             self.emit('receive', {err: null, data: {msgArr: msgArr, bid: input}});
                             return receiveReset(callback);
@@ -379,7 +393,7 @@ function pollingDispatcher(input){
                     console.log(err);
                 })
         }
-    }
+    };
     return handlers[input] || handlers['defaultHandler'];
 }
 function spiderContent(self, unReadCount, callback){
@@ -393,7 +407,7 @@ function spiderContent(self, unReadCount, callback){
             var PromiseArr = [];
             unreadArr.forEach(function(item){
                 PromiseArr.push(_getContentAsync(self, item));
-            })
+            });
             return PromiseBB.all(PromiseArr).then(function(arr){
                 return arr;
             })
@@ -404,7 +418,7 @@ function spiderContent(self, unReadCount, callback){
         .thenCatch(function(err){
             console.log("err--------------"+err);
             return callback(err);
-        })
+        });
     function _getContent(self, promise, callback){
         promise.findElement({'css': 'pre.js_message_plain'}).then(function(preEl){
             preEl.getText().then(function(payLoad){
@@ -443,7 +457,7 @@ function replayMsg(self, count){
 WcBot.prototype._reply = function(count){
     driver.findElement({'id':'editArea'}).sendKeys("这个一个检测机器人，主人正在睡觉，请勿打扰");
     driver.findElement({css:'.btn_send'}).click();
-}
+};
 WcBot.prototype.onReceive = function(handler){
     var self = this;
     this.on('receive', function(data){
@@ -451,7 +465,7 @@ WcBot.prototype.onReceive = function(handler){
         var data = data.data;
         handler.call(self, err, data);
     });
-}
+};
 WcBot.prototype.onAddContact = function(handler){
     var self = this;
     this.on('onAddContact', function(data){
@@ -459,7 +473,7 @@ WcBot.prototype.onAddContact = function(handler){
         var data = data.data;
         handler.call(self, err, data);
     });
-}
+};
 WcBot.prototype._walkCurrList = function(unReadCount, callback){
     if(!callback){
         callback = unReadCount;
@@ -502,7 +516,7 @@ WcBot.prototype._walkCurrList = function(unReadCount, callback){
         .thenCatch(function(){
             return callback();
         })
-}
+};
 WcBot.prototype._analysisPayload =function(){
 
 }
