@@ -1,4 +1,5 @@
 var taskQueue = require('./TasksQueue');
+var codeService = require('../services/codeService');
 var webdriver = require('selenium-webdriver');
 var genHelper = require('./webdriver-helper');
 var EventEmitter = require('events').EventEmitter;
@@ -29,7 +30,7 @@ WcBot.prototype.start = function(){
     self._login(function(){
         //var count = 0;
         function polling(){
-            console.log("polling---------------")
+            console.log("polling---------------");
             setTimeout(function(){
                 //add property id, add queue api already in
                 return taskQueue.enqueue(self._walkChatList.bind(self), null, function(){
@@ -43,12 +44,6 @@ WcBot.prototype.start = function(){
     });
 
 };
-function isEven(num){
-    if(!isNaN(num)){
-        return num%2 === 1;
-    }
-    throw new Error('arguments type is not a Number');
-}
 WcBot.prototype._listenCurrUser = function(){
     var self = this;
     currInteral = setInterval(self._walkCurrList.bind(self), 200);
@@ -56,11 +51,11 @@ WcBot.prototype._listenCurrUser = function(){
 WcBot.prototype.send = function(json, callback) {
     var self = this;
     var content = json.content;
-    if(!initialed || json.sendTo != self.sendTo){
-        self.sendTo = json.sendTo;
-        console.log(self.sendTo)
-        taskQueue.enqueue(self._findOne.bind(self));
-    }
+    //if(!initialed || json.sendTo != self.sendTo){
+    //    self.sendTo = json.sendTo;
+    //    console.log(self.sendTo)
+    taskQueue.enqueue(self._findOne.bind(self));
+    //}
     taskQueue.enqueue(function(cb){
         driver.findElement({'id':'editArea'}).sendKeys(content);
         driver.findElement({css:'.btn_send'}).click().then(function(){
@@ -209,7 +204,7 @@ function _addContact(id, encodeId, callback){
 function _findOneInListAsync(id){
     return driver.findElements({'css': 'div[ng-repeat*="chatContact"]'})
         .then(function(collection) {
-            console.log(collection.length)
+            console.log(collection.length);
             collection.map(function(item){
                 item.findElement({'css': 'div.chat_item >div.info >h3 >span'})
                     .then(function(span){
@@ -241,14 +236,10 @@ function _findOneInChatAysnc(id){
             console.log('Failed to findOne in chat[code]-----' + JSON.stringify(e))
         })
 }
-function _geneRemark(){
-    var id = 0;
-    return id++;
-}
 function _modifyRemarkAsync(codeTmp){
     var item, code, nickName;
     if(!codeTmp){
-        code = _geneRemark();
+        code = codeService.fetch();
     }
     return driver.findElement({'css' :'#mmpop_profile >div.profile_mini >div.profile_mini_bd'})
         .then(function(itemtmp){
@@ -269,10 +260,22 @@ function _modifyRemarkAsync(codeTmp){
                 .then(function(){
                     itemp.click()
                         .then(function(){
+                            return driver.sleep(10);
+                        })
+                        .then(function(){
                             return itemp.click();
                         })
                         .then(function(){
-                            driver.sleep(500)
+                            return driver.sleep(10);
+                        })
+                        .then(function(){
+                            return itemp.click();
+                        })
+                        .then(()=>{
+                            return driver.executeScript('window.document.querySelector("div.meta_area p").blur();')
+                        })
+                        .then(function(){
+                            return driver.sleep(500)
                                 .then(function(){
                                     return itemp.sendKeys(code)
                                 })
@@ -383,7 +386,9 @@ function pollingDispatcher(input){
                     })
                     .then(function(){
                         spiderContent(self, count, function(err, msgArr){
-                            self.emit('receive', {err: null, data: {msgArr: msgArr, bid: input}});
+                            if(msgArr){
+                                self.emit('receive', {err: null, data: {msgArr: msgArr, bid: input}});
+                            }
                             return receiveReset(callback);
                         })
                     });
@@ -440,13 +445,13 @@ function receiveReset(callback){
                 .then(function(){
                     item.click()
                         .then(function(){
-                            console.log("============================")
+                            console.log("============================");
                             return callback()
                         })
                 })
         })
         .thenCatch(function(err){
-            console.log("Failed to reset in list [code]-------")
+            console.log("Failed to reset in list [code]-------");
             console.log(err);
         })
 }
@@ -519,6 +524,6 @@ WcBot.prototype._walkCurrList = function(unReadCount, callback){
 };
 WcBot.prototype._analysisPayload =function(){
 
-}
+};
 module.exports = WcBot;
 
