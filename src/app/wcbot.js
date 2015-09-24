@@ -4,19 +4,38 @@ var webdriver = require('selenium-webdriver');
 var genHelper = require('./webdriver-helper');
 var EventEmitter = require('events').EventEmitter;
 var driver = new webdriver.Builder().withCapabilities(webdriver.Capabilities.chrome()).build();
+var request = require('request');
+var j = request.jar();
+var fs = require('fs');
 var helper = genHelper(webdriver, driver);
 var flow = webdriver.promise.controlFlow();
+var findSuffix = require('./suffix-map').findSuffix;
 var initialed = false;
 var loggedIn = false;
 var avatarLocator = webdriver.By.css('div.header > div.avatar');
 var searchLocator = webdriver.By.className('frm_search');
 var receiveRestLocator = webdriver.By.css('div.chat_list div.top');
-//var searchedContactLocator = webdriver.By.css('div.contact_item:');
 var searchedContactLocator = webdriver.By.css(' div[data-height-calc=heightCalc]:nth-child(2) > div');
-var blackList = {};
+var fsServer = 'http://ci.www.wenode.org/api/file/upload';
 var PromiseBB = require('bluebird');
 var chatCache = {};
 var currInteral = {};
+var stream = require('stream');
+var Readable = stream.Readable;
+var Writable = stream.Writable;
+var Transform = stream.Transform;
+//var Readable = require('stream').Readable;
+//function BufferToStream(buffer){
+//    this._source = buffer;
+//    this._offset = 0;
+//    this._offsetLen = 0;
+//    Readable.call(this);
+//}
+//require('util').inherits(BufferToStream, Readable);
+//BufferToStream.prototype._read = function(size){
+//    this.push(this._buffer);
+//};
+
 function WcBot(id){
     EventEmitter.call(this);
     this.id = id;
@@ -28,19 +47,24 @@ util.inherits(WcBot, EventEmitter);
 WcBot.prototype.start = function(){
     var self = this;
     self._login(function(){
-        //var count = 0;
+        var url = 'http://wx.qq.com/cgi-bin/mmwebwx-bin/webwxgetmsgimg?&MsgID=6159434111060829045&skey=%40crypt_a24ceaa9_405fcaf18a5981c30cbf68d5953cd4c3';
+        driver.manage().getCookies().then(function(cookies){
+            cookies.forEach(function(cookie){
+                var requestCookie = request.cookie(cookie.name + '=' + cookie.value);
+                j.setCookie(requestCookie, url);
+            });
+            polling();
+        });
         function polling(){
             console.log("polling---------------");
             setTimeout(function(){
                 //add property id, add queue api already in
                 return taskQueue.enqueue(self._walkChatList.bind(self), null, function(){
-                    //count++;
                     polling();
 
                 })
             }, 1000);
         }
-        polling();
     });
 
 };
@@ -405,9 +429,11 @@ function spiderContent(self, unReadCount, callback){
     //walk in dom
     driver.findElement({'css': '#chatArea'})
         .then(function(chatwrapper){
-            return chatwrapper.findElements({'css': '.bubble_default'})
+            return chatwrapper.findElements({'css': '.js_message_bubble'})
         })
         .then(function(collection){
+            console.log("^^^^^^^^^^^^^^^^^^^^");
+            console.log(collection.length);
             var unreadArr = collection.slice(-unReadCount);
             var PromiseArr = [];
             unreadArr.forEach(function(item){
@@ -425,15 +451,118 @@ function spiderContent(self, unReadCount, callback){
             return callback(err);
         });
     function _getContent(self, promise, callback){
-        promise.findElement({'css': 'pre.js_message_plain'}).then(function(preEl){
-            preEl.getText().then(function(payLoad){
-                var msg = {
-                    from: self.sendTo,
-                    payLoad: payLoad
-                };
-                return callback(null, msg);
+        console.log("*********************");
+        var currNode = null;
+        promise.findElement({'css': '.bubble_cont >div'})
+            .then(function(item){
+                console.log("$$$$$$$$$$$$$$$$$$$$$$$");
+                console.log(item);
+                currNode = item;
+                return item.getAttribute('class')
             })
-        })
+            .then(function(className){
+                console.log("className###################")
+                console.log(className);
+                if(className === 'plain'){
+                    console.log("***********************")
+                    currNode.findElement({'css': 'pre.js_message_plain'})
+                    .then(function(preEl){
+                        preEl.getText().then(function(payLoad){
+                            var msg = {
+                                from: self.sendTo,
+                                payLoad: payLoad,
+                                type: 'txt'
+                            };
+                            return callback(null, msg);
+                        })
+                    })
+                    .thenCatch(function(e){
+                        return callback(e, null)
+                    })
+                }
+                if(className === 'picture'){
+                    console.log("enter pic----------------");
+                    currNode.findElement({'css': '.msg-img'})
+                    .then(function(img){
+                        console.log("img----------------");
+                        console.log(img);
+                        return img.getAttribute('src')
+                    })
+                    .then(function(src){
+                        console.log("src----------------" + src);
+                        return getMediaUrl(src)
+                    })
+                    .then(function(url){
+                        console.log("url----------------" + url);
+                        getMediaFile(url, function(err, res){
+                            if(err){
+                                return callback(err, null)
+                            }
+                            var msg = {
+                                from: self.sendTo,
+                                payLoad: res,
+                                type: 'img'
+                            };
+                            callback(null, msg);
+                        })
+                    })
+                    .thenCatch(function(e){
+                        callback(e, null)
+                    })
+                }
+                if(className === 'voice'){
+                    promise.getAttribute('data-cm').then(function(attr){
+                        var obj = JSON.parse(attr);
+                        getMediaFile('https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxgetvoice?msgid=' + obj.msgId, function(err, res){
+                            if(err){
+                                return callback(err, null)
+                            }
+                            var msg = {
+                                from: self.sendTo,
+                                payLoad: res,
+                                type: 'voi'
+                            };
+                            callback(null, msg);
+                        });
+                    })
+                    .thenCatch(function(e){
+                        callback(e, null)
+                    })
+                }
+            });
+            function getMediaUrl(src){
+                var url = src.split('&type=slave')[0];
+                return url;
+            }
+            function getMediaFile(url, callback){
+                console.log("getFileUrl-------------" + url);
+                request({url: url, jar: j, encoding: null}, function(err, res, body){
+                    var resSplit = res.req.path.split('/');
+                    console.log("body-------------" + JSON.stringify(body));
+                    console.log("filename-------------" + resSplit[resSplit.length-1]);
+                    console.log("contentType-------------" + res.headers['content-type']);
+                    var formData = {
+                        file: {
+                            value: request({url: url, jar: j, encoding: null}),
+                            options: {
+                                filename: 'xxx.' + findSuffix(res.headers['content-type']),
+                                //contentType: res.headers['content-type']
+                            }
+                        }
+                    };
+                    request.post({url:fsServer, formData: formData}, function(err, res, body) {
+                        var json = JSON.parse(body);
+                        console.log("remote file-----------------" + JSON.stringify(json));
+                        if (err) {
+                            return callback(err, null);
+                        }
+                        if(json.err){
+                            return call(json.err, null);
+                        }
+                        callback(null, json['media_id']);
+                    });
+                });
+            }
     }
     var _getContentAsync = PromiseBB.promisify(_getContent);
 }
