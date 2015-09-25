@@ -19,14 +19,14 @@ pubSubService.subClient.on('message', (channel, msg)=>{
     eval(channel + 'Handler').call(null, channel, msg);
 });
 function onReceiveHandler(channel, msg){
-    service.onReceive(function(err, data){
+    service.onReceive((err, data)=>{
         if(err) return console.log(err);
         pubSubService.pubClient.publish('onReceive', JSON.stringify(data));
     });
     return;
 }
 function onAddContact(channel, msg){
-    service.onAddContact(function(err, data){
+    service.onAddContact((err, data)=>{
         if(err) return console.log(err);
         pubSubService.pubClient.publish('onAddContact', JSON.stringify(data));
     });
@@ -46,7 +46,7 @@ function sendHandler(channel, msg){
 function readProfileHandler(channel, msg){
     //msg = {bid: String}
     var msgJson = JSON.parse(msg);
-    service.readProfile(msgJson.bid, sendHandler);
+    service.readProfile(msgJson.bid, msgCallback);
     return;
 }
 function msgCallback(err, data){
