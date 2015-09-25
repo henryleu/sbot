@@ -469,9 +469,10 @@ function spiderContent(self, unReadCount, callback){
                     .then(function(preEl){
                         preEl.getText().then(function(payLoad){
                             var msg = {
-                                from: self.sendTo,
-                                payLoad: payLoad,
-                                type: 'txt'
+                                FromUserName: self.sendTo,
+                                Content: payLoad,
+                                MsgType: 'text',
+                                CreateTime: new Date().getTime()
                             };
                             return callback(null, msg);
                         })
@@ -499,9 +500,10 @@ function spiderContent(self, unReadCount, callback){
                                 return callback(err, null)
                             }
                             var msg = {
-                                from: self.sendTo,
-                                payLoad: res,
-                                type: 'img'
+                                FromUserName: self.sendTo,
+                                MediaId: res,
+                                CreateTime: new Date().getTime(),
+                                MsgType: 'image'
                             };
                             callback(null, msg);
                         })
@@ -518,9 +520,10 @@ function spiderContent(self, unReadCount, callback){
                                 return callback(err, null)
                             }
                             var msg = {
-                                from: self.sendTo,
-                                payLoad: res,
-                                type: 'voi'
+                                FromUserName: self.sendTo,
+                                MediaId: res,
+                                MsgType: 'voice',
+                                CreateTime: new Date()
                             };
                             callback(null, msg);
                         });
@@ -551,11 +554,11 @@ function spiderContent(self, unReadCount, callback){
                         }
                     };
                     request.post({url:fsServer, formData: formData}, function(err, res, body) {
-                        var json = JSON.parse(body);
                         console.log("remote file-----------------" + JSON.stringify(json));
                         if (err) {
                             return callback(err, null);
                         }
+                        var json = JSON.parse(body);
                         if(json.err){
                             return call(json.err, null);
                         }
