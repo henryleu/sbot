@@ -89,7 +89,7 @@ WcBot.prototype.send = function(json, callback) {
             })
         });
     }, null, function(){
-        callback()
+        callback(null, json)
     });
     initialed = true;
 };
