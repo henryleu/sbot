@@ -20,6 +20,8 @@ pubSubService.subClient.on('message', (channel, msg)=>{
 });
 function onReceiveHandler(channel, msg){
     service.onReceive((err, msgPack)=>{
+        console.log("receive-----------------------")
+        console.log(msgPack)
         msgPack.msgArr.forEach((data)=>{
             pubSubService.pubClient.publish('onReceive', JSON.stringify({err: err, data: data}));
         });
@@ -34,6 +36,8 @@ function onAddContact(channel, msg){
     return;
 }
 function sendHandler(channel, msg){
+    console.log("***********************");
+    console.log(msg)
     //msg = { ToUserName:xxx, MsgType:'text/voice/image', Content:String, Url:MediaUrl}
     var msgJson = JSON.parse(msg);
     if(msgJson.MsgType === 'text'){
