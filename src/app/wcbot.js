@@ -74,6 +74,7 @@ WcBot.prototype._listenCurrUser = function(){
 };
 WcBot.prototype.send = function(json, callback) {
     var self = this;
+    self.sendTo = json.sendTo;
     var content = json.content;
     //if(!initialed || json.sendTo != self.sendTo){
     //    self.sendTo = json.sendTo;
@@ -128,16 +129,19 @@ function _readProfile(bid, self, callback){
         driver.findElement({'css': '#chatArea>.box_hd'})
             .then(function(boxItem){
                 box = boxItem;
-                box.findElement({'css': 'div.title_wrap>div.title.poi'})
+                return box.findElement({'css': 'div.title_wrap>div.title.poi'})
                     .then(function(clickbtn1){
                         return clickbtn1.click()
                     })
             })
             .then(function(){
-                box.findElement({'css': 'div#chatRoomMembersWrap div.member:nth-child(2)>img'})
+                return box.findElement({'css': 'div#chatRoomMembersWrap div.member:nth-child(2)>img'})
                     .then(function(clickbtn2){
                         driver.sleep(500).then(function(){
                             return clickbtn2.click()
+                        })
+                        .then(function(){
+                            return driver.sleep(2000);
                         })
                     })
                     .thenCatch(function(err){
@@ -145,6 +149,7 @@ function _readProfile(bid, self, callback){
                     })
             })
             .then(function(){
+                console.log("@@@@@@@@@@@@@@@@@@@@@@");
                 _readProfileChain(function(err, data){
                     if(err){
                         throw new Error('Failed to read Profile Chain');
@@ -160,44 +165,64 @@ function _readProfile(bid, self, callback){
     });
 }
 function _readProfileChain(callback){
+    console.log("!!!!!!!!!!!!!!!!!!!");
     var data = {},
         pop;
     driver.findElement({'css': 'div#mmpop_profile>div.profile_mini'})
         .then(function(popItem){
+            console.log("@@@@@@@@@@@@@@@@@@");
+            console.log(popItem)
             pop = popItem;
             return pop.findElement({'css': 'div.profile_mini_hd img'})
                 .then(function(headImg){
+                    console.log("##################");
+                    console.log(headImg)
                     return headImg.getAttribute('src')
                 })
                 .then(function(src){
+                    console.log("$$$$$$$$$$$$$$$$");
+                    console.log(src)
                     return data.headUrl = src;
                 })
         })
         .then(function(src){
-            pop.findElement({'css': 'div.profile_mini_bd>div.nickname_area h4'})
+            return pop.findElement({'css': 'div.profile_mini_bd>div.nickname_area h4'})
                 .then(function(h4){
+                    console.log("%%%%%%%%%%%%%%%%%%")
+                    console.log(h4);
                     h4.getText()
                         .then(function(txt){
+                            console.log("^^^^^^^^^^^^^^^^^^")
+                            console.log(txt);
                             return data.nickName = txt;
                         })
                 })
         })
         .then(function(){
-            pop.findElement({'css': 'div.profile_mini_bd>div.meta_area>div.meta_item:nth-child(1) p'})
+            return pop.findElement({'css': 'div.profile_mini_bd>div.meta_area>div.meta_item:nth-child(1) p'})
                 .then(function(bidItem){
+                    console.log("&&&&&&&&&&&&&&&");
+                    console.log(bidItem);
                     return bidItem.getText()
                 })
                 .then(function(bidtxt){
+                    console.log("****************");
+                    console.log(bidtxt);
                     return data.bid = bidtxt;
                 })
         })
         .then(function(){
-            pop.findElement({'css': 'div.profile_mini_bd>div.meta_area>div.meta_item:nth-child(2) p'})
+            return pop.findElement({'css': 'div.profile_mini_bd>div.meta_area>div.meta_item:nth-child(2) p'})
                 .then(function(placeItem){
+                    console.log("****************");
+                    console.log(placeItem);
                     return placeItem.getText()
                 })
                 .then(function(placetxt){
+                    console.log("****************");
+                    console.log(placetxt);
                     data.place = placetxt;
+                    console.log(data)
                     receiveReset(function(){
                         return callback(null, data);
                     });
@@ -260,6 +285,15 @@ function _findOneInChatAysnc(id){
             console.log('Failed to findOne in chat[code]-----' + JSON.stringify(e))
         })
 }
+function _findElementsInChatAysnc(){
+    return driver.findElements({'css': '#chatArea div.card>div.card_bd>div.info>h3'})
+        .then(function(items){
+            return items
+        })
+        .thenCatch(function(e){
+            console.log('Failed to findOne in chat[code]-----' + JSON.stringify(e))
+        })
+}
 function _modifyRemarkAsync(codeTmp){
     var item, code, nickName;
     if(!codeTmp){
@@ -268,15 +302,18 @@ function _modifyRemarkAsync(codeTmp){
     return driver.findElement({'css' :'#mmpop_profile >div.profile_mini >div.profile_mini_bd'})
         .then(function(itemtmp){
             item = itemtmp;
-            return item.findElement({'css': 'div.nickname_area h4'})
+            item.findElement({'css': 'div.nickname_area h4'})
                 .then(function(h4El){
                     return h4El.getText()
                 })
                 .then(function(txt){
+                    console.log("-----------------------");
+                    console.log(txt);
                     return nickName = txt;
                 })
         })
         .then(function(){
+            console.log("======================");
             return item.findElement({'css': 'div.meta_area p'})
         })
         .then(function(itemp){
@@ -284,25 +321,16 @@ function _modifyRemarkAsync(codeTmp){
                 .then(function(){
                     itemp.click()
                         .then(function(){
-                            return driver.sleep(10);
+                            return driver.executeScript('window.document.querySelector("div.meta_area p").innerText = "";')
                         })
                         .then(function(){
-                            return itemp.click();
-                        })
-                        .then(function(){
-                            return driver.sleep(10);
-                        })
-                        .then(function(){
-                            return itemp.click();
-                        })
-                        .then(()=>{
-                            return driver.executeScript('window.document.querySelector("div.meta_area p").blur();')
+                            return itemp.sendKeys(code)
                         })
                         .then(function(){
                             return driver.sleep(500)
-                                .then(function(){
-                                    return itemp.sendKeys(code)
-                                })
+                        })
+                        .then(function(){
+                            return driver.executeScript('window.document.querySelector("div.meta_area p").blur();')
                         })
                 })
         })
@@ -331,17 +359,22 @@ function _findOnePro(id, callback){
     driver.findElements({
         'css': 'div.contact_item.on'
     }).
-        then (function (collection) {
+    then (function (collection) {
+        //var len = collection.length, i=0;
         collection.map(function (item) {
             var contactItem = item;
             item.findElement({'css': 'h4.nickname'}).then(function(infoItem){
                 infoItem.getText().
                     then(function (value) {
+                        //i++;
                         if (value === id) {
                             contactItem.click().then(function(){
-                                callback();
+                                callback(null, null);
                             })
                         }
+                        //else if(i === len){
+                        //    callback(new Error('user does not exist'));
+                        //}
                     });
             });
         });
@@ -376,6 +409,33 @@ WcBot.prototype._walkChatList = function(callback){
 };
 
 function pollingDispatcher(input){
+    //var handlers = {
+    //    '朋友推荐消息': function(self, item, parentItem, callback){
+    //        parentItem.click()
+    //            .then(function(){
+    //                return driver.sleep(500);
+    //            })
+    //            .then(function(){
+    //                return _findOneInChatAysnc()
+    //                    .then(function(){
+    //                        return _modifyRemarkAsync()
+    //                    })
+    //                    .then(function(profile){
+    //                        console.log("%%%%%%%%%%%%%%%%%%%");
+    //                        console.log(profile);
+    //                        console.log(self);
+    //                        self.emit('contactAdded', {err: null, data: {bid: profile.code, nickName: profile.nickName}});
+    //                        driver.sleep(500).then(function(){
+    //                            return receiveReset(callback);
+    //                        })
+    //                    })
+    //                    .thenCatch(function(err){
+    //                        console.log("Failed to add contact----");
+    //                        console.log(err);
+    //                        callback();
+    //                    })
+    //            })
+    //    },
     var handlers = {
         '朋友推荐消息': function(self, item, parentItem, callback){
             parentItem.click()
@@ -383,22 +443,73 @@ function pollingDispatcher(input){
                     return driver.sleep(500);
                 })
                 .then(function(){
-                return _findOneInChatAysnc()
-                    .then(function(){
-                        return _modifyRemarkAsync()
-                    })
-                    .then(function(profile){
-                        self.emit('onAddContact', {err: null, data: {bid: profile.code, nickName: profile.nickName}});
-                        driver.sleep(500).then(function(){
-                            return receiveReset(callback);
+                return _findElementsInChatAysnc()
+                    .then(function(items){
+                        var promiseArr = [];
+                        items.forEach(function(item){
+                            promiseArr.push(addOneUserAsync(self, item));
+                        });
+                        PromiseBB.all(promiseArr).then(function(arr){
+                            return arr;
                         })
+                    })
+                    .then(function() {
+                        return driver.sleep(500)
+                    })
+                    .then(function(){
+                        return clearPanelAsync();
+                    })
+                    .then(function() {
+                        return receiveReset(callback);
                     })
                     .thenCatch(function(err){
                         console.log("Failed to add contact----");
                         console.log(err);
                         callback();
                     })
-            })
+            });
+            function addOneUserAsync(self, item){
+                return item.click()
+                .then(function(){
+                    return _modifyRemarkAsync()
+                })
+                .then(function(profile){
+                    console.log("%%%%%%%%%%%%%%%%%%%");
+                    console.log(profile);
+                    console.log(self);
+                    self.emit('contactAdded', {err: null, data: {bid: profile.code, nickName: profile.nickName}});
+
+                })
+            }
+            function clearPanelAsync(){
+                var chatArea, posX;
+                return driver.findElement({css: '.chat_bd'})
+                .then(function(item){
+                    chatArea = item;
+                    return driver.executeScript('return document.querySelector(".chat_bd").clientWidth')
+                })
+                .then(function(width){
+                    console.log("{{{{{{{{{{{{{{{{{{{{{{{{");
+                    console.log(width);
+                    console.log(typeof width);
+                    posX = parseInt(width/2, 10) - 10;
+                    console.log(webdriver.Button.RIGHT);
+                    return new webdriver.ActionSequence(driver)
+                        .mouseMove(chatArea, {x: posX, y:0})
+                        .click(chatArea,  webdriver.Button.RIGHT)
+                        .perform();
+                })
+                .then(function(){
+                    console.log("action execute ok**************************");
+                    return driver.findElement({css: 'a[ng-click="item.callback()"]'})
+                })
+                .then(function(item){
+                    return item.click();
+                })
+                .then(function(){
+                    return driver.sleep(500);
+                })
+            }
         },
         'defaultHandler': function(self, item, parentItem, callback){
             self.sendTo = input;
@@ -604,8 +715,11 @@ WcBot.prototype.onReceive = function(handler){
     });
 };
 WcBot.prototype.onAddContact = function(handler){
+    console.log("!!!!!!!!!!!!!!!!!!!!!!")
     var self = this;
-    this.on('onAddContact', function(data){
+    this.on('contactAdded', function(data){
+        console.log("#####################");
+        console.log(data);
         var err = data.err;
         var data = data.data;
         handler.call(self, err, data);
