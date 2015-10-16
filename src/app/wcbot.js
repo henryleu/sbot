@@ -4,6 +4,7 @@ var webdriver = require('selenium-webdriver');
 var genHelper = require('./webdriver-helper');
 var EventEmitter = require('events').EventEmitter;
 var driver = new webdriver.Builder().withCapabilities(webdriver.Capabilities.chrome()).build();
+var waitFor = require('../util').waitFor;
 var request = require('request');
 var j = request.jar();
 var fs = require('fs');
@@ -36,7 +37,8 @@ util.inherits(WcBot, EventEmitter);
 WcBot.prototype.start = function(){
     var self = this;
     self._login(function(){
-        var url = 'http://wx.qq.com/cgi-bin/mmwebwx-bin/webwxgetmsgimg?&MsgID=6159434111060829045&skey=%40crypt_a24ceaa9_405fcaf18a5981c30cbf68d5953cd4c3';
+        //var url = 'http://wx.qq.com/cgi-bin/mmwebwx-bin/webwxgetmsgimg?&MsgID=6159434111060829045&skey=%40crypt_a24ceaa9_405fcaf18a5981c30cbf68d5953cd4c3';
+        var url = 'http://wx.qq.com/';
         driver.manage().getCookies().then(function(cookies){
             cookies.forEach(function(cookie){
                 var requestCookie = request.cookie(cookie.name + '=' + cookie.value);
@@ -533,7 +535,7 @@ function pollingDispatcher(input){
                         })
                     })
                     .then(function() {
-                        return driver.sleep(500)
+                        return driver.sleep(1000)
                     })
                     .then(function(){
                         return clearPanelAsync();
@@ -571,7 +573,7 @@ function pollingDispatcher(input){
                     console.log("{{{{{{{{{{{{{{{{{{{{{{{{");
                     console.log(width);
                     console.log(typeof width);
-                    posX = parseInt(width/2, 10) - 10;
+                    posX = parseInt(width, 10) - 10;
                     console.log(webdriver.Button.RIGHT);
                     return new webdriver.ActionSequence(driver)
                         .mouseMove(chatArea, {x: posX, y:0})
@@ -641,12 +643,9 @@ function spiderContent(self, unReadCount, callback){
             return callback(err);
         });
     function _getContent(self, promise, callback){
-        console.log("*********************");
         var currNode = null;
         promise.findElement({'css': '.bubble_cont >div'})
             .then(function(item){
-                console.log("$$$$$$$$$$$$$$$$$$$$$$$");
-                console.log(item);
                 currNode = item;
                 return item.getAttribute('class')
             })
@@ -731,6 +730,11 @@ function spiderContent(self, unReadCount, callback){
                 console.log("getFileUrl-------------" + url);
                 request({url: url, jar: j, encoding: null}, function(err, res, body){
                     var resSplit = res.req.path.split('/');
+                    var fileType = validateMedia();
+                    if(!fileType){
+                        setTimeout(getMediaFile(url, callback), 1000);
+                        return;
+                    }
                     console.log("body-------------" + JSON.stringify(body));
                     console.log("filename-------------" + resSplit[resSplit.length-1]);
                     console.log("contentType-------------" + res.headers['content-type']);
@@ -738,7 +742,7 @@ function spiderContent(self, unReadCount, callback){
                         file: {
                             value: request({url: url, jar: j, encoding: null}),
                             options: {
-                                filename: 'xxx.' + findSuffix(res.headers['content-type']),
+                                filename: 'xxx.' + fileType,
                                 //contentType: res.headers['content-type']
                             }
                         }
@@ -756,6 +760,13 @@ function spiderContent(self, unReadCount, callback){
                     });
                 });
             }
+        function validateMedia(type){
+            try{
+                return findSuffix(type);
+            }catch(e){
+                return false;
+            }
+        }
     }
     var _getContentAsync = PromiseBB.promisify(_getContent);
 }
