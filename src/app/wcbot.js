@@ -106,7 +106,7 @@ WcBot.prototype.onReceive = function(handler){
     });
 };
 /**
- * Attach a listener to WcBot, onAddContact is invoke when a msg being received.
+ * Attach a listener to WcBot, onAddContact is invoke when a contact being added.
  * @param handler
  */
 WcBot.prototype.onAddContact = function(handler){
