@@ -20,21 +20,7 @@ var fsServer = 'http://ci.www.wenode.org/api/file/upload';
 var PromiseBB = require('bluebird');
 var chatCache = {};
 var currInteral = {};
-var stream = require('stream');
-var Readable = stream.Readable;
-var Writable = stream.Writable;
-var Transform = stream.Transform;
-//var Readable = require('stream').Readable;
-//function BufferToStream(buffer){
-//    this._source = buffer;
-//    this._offset = 0;
-//    this._offsetLen = 0;
-//    Readable.call(this);
-//}
-//require('util').inherits(BufferToStream, Readable);
-//BufferToStream.prototype._read = function(size){
-//    this.push(this._buffer);
-//};
+
 
 function WcBot(id){
     EventEmitter.call(this);
@@ -44,6 +30,9 @@ function WcBot(id){
 }
 var util = require('util');
 util.inherits(WcBot, EventEmitter);
+/**
+ * Launch the chrome client and get ready to polling
+ */
 WcBot.prototype.start = function(){
     var self = this;
     self._login(function(){
@@ -68,10 +57,11 @@ WcBot.prototype.start = function(){
     });
 
 };
-WcBot.prototype._listenCurrUser = function(){
-    var self = this;
-    currInteral = setInterval(self._walkCurrList.bind(self), 200);
-};
+/**
+ * Send a msg to a contact
+ * @param json {sendTo, content}
+ * @param callback
+ */
 WcBot.prototype.send = function(json, callback) {
     var self = this;
     self.sendTo = json.sendTo;
@@ -94,6 +84,56 @@ WcBot.prototype.send = function(json, callback) {
     });
     initialed = true;
 };
+/**
+ * Read a contact,s profile
+ * @param bid String
+ * @param callback
+ */
+WcBot.prototype.readProfile = function(bid, callback){
+    var self = this;
+    taskQueue.enqueue(_readProfile.bind(self),{args:[bid, self], priority: 1, context:self}, callback);
+};
+/**
+ * Attach a listener to WcBot, onReceive is invoke when a msg being received.
+ * @param handler
+ */
+WcBot.prototype.onReceive = function(handler){
+    var self = this;
+    this.on('receive', function(data){
+        var err = data.err;
+        var data = data.data;
+        handler.call(self, err, data);
+    });
+};
+/**
+ * Attach a listener to WcBot, onAddContact is invoke when a msg being received.
+ * @param handler
+ */
+WcBot.prototype.onAddContact = function(handler){
+    var self = this;
+    this.on('contactAdded', function(data){
+        var err = data.err;
+        var data = data.data;
+        handler.call(self, err, data);
+    });
+};
+/**
+ * Add a contact actively
+ * @param id
+ * @param encodeId
+ * @param callback
+ */
+WcBot.prototype.addContact = function(id, encodeId, callback){
+    var self = this;
+    taskQueue.enqueue(_addContact.bind(self), {args:[id, encodeId], priority: 1, context: self}, function(){
+        callback();
+    });
+};
+
+WcBot.prototype._listenCurrUser = function(){
+    var self = this;
+    currInteral = setInterval(self._walkCurrList.bind(self), 200);
+};
 WcBot.prototype._login = function(callback){
     var self = this;
     driver.get('https://wx.qq.com');
@@ -112,16 +152,88 @@ WcBot.prototype._login = function(callback){
     }, 60*1000);
     self.once('login', callback);
 };
-WcBot.prototype.addContact = function(id, encodeId, callback){
-    var self = this;
-    taskQueue.enqueue(_addContact.bind(self), {args:[id, encodeId], priority: 1, context: self}, function(){
-        callback();
-    });
+WcBot.prototype._reply = function(count){
+    driver.findElement({'id':'editArea'}).sendKeys("这个一个检测机器人，主人正在睡觉，请勿打扰");
+    driver.findElement({css:'.btn_send'}).click();
 };
-WcBot.prototype.readProfile = function(bid, callback){
+WcBot.prototype._findOne = function(callback){
     var self = this;
-    taskQueue.enqueue(_readProfile.bind(self),{args:[bid, self], priority: 1, context:self}, callback);
+    return _findOnePro(self.sendTo, callback)
 };
+WcBot.prototype._walkChatList = function(callback){
+    var self = this;
+    driver.findElements({'css': 'div[ng-repeat*="chatContact"]'})
+        .then(function(collection){
+            function iterator(index){
+                var item = currItem = collection[index];
+                item.findElement({'css': 'i.web_wechat_reddot_middle.icon'})
+                    .then(function(iblock){
+                        var iblockTemp = iblock;
+                        item.findElement({'css': 'span.nickname_text'})
+                            .then(function(h3El){
+                                h3El.getText()
+                                    .then(function(txt){
+                                        return pollingDispatcher(txt)(self, iblockTemp, currItem, callback);
+                                    })
+                            })
+                    })
+                    .thenCatch(function(){
+                        return iterator(index+1)
+                    })
+            }
+            iterator(0);
+        })
+        .thenCatch(function(err){
+            return callback(err);
+        })
+};
+WcBot.prototype._walkCurrList = function(unReadCount, callback){
+    if(!callback){
+        callback = unReadCount;
+        unReadCount = null;
+    }
+    var self = this;
+    //init chat cache
+    !chatCache[self.sendTo] && (chatCache[self.sendTo] = 0);
+    //cache update
+    unReadCount && (chatCache[self.sendTo] = (chatCache[self.sendTo] || 0) + unReadCount);
+    //walk dom
+    driver.findElement({'css': '#chatArea'})
+        .then(function(chatwrapper){
+            chatwrapper.findElements({'css': '.bubble_default'}).then(function(collection){
+                var currCount = collection.length,
+                    readedCount = chatCache[self.sendTo];
+                if(!unReadCount){
+                    if(readedCount === currCount){
+                        return callback();
+                    }
+                    unReadCount = currCount - readedCount;
+                    chatCache[self.sendTo] = currCount;
+                }
+                var unreadArr = collection.slice(-unReadCount);
+                if(unreadArr.length === 0) return callback();
+                unreadArr.map(function(item){
+                    item.findElement({'css': 'pre.js_message_plain'}).then(function(preEl){
+                        preEl.getText().then(function(payLoad){
+                            //self.emit('receive', {
+                            //    from: self.sendTo,
+                            //    payLoad: payLoad
+                            //});
+                            replayMsg(self, null, callback);
+                            //return callback();
+                        })
+                    })
+                })
+            })
+        })
+        .thenCatch(function(){
+            return callback();
+        })
+};
+WcBot.prototype._analysisPayload =function(){
+
+};
+
 function _readProfile(bid, self, callback){
     var box;
     _findOnePro(bid, function(){
@@ -348,18 +460,13 @@ function _modifyRemarkAsync(codeTmp){
             console.log(err)
         })
 }
-
-WcBot.prototype._findOne = function(callback){
-    var self = this;
-    return _findOnePro(self.sendTo, callback)
-};
 function _findOnePro(id, callback){
     driver.findElement(searchLocator).sendKeys(id);
     driver.sleep(1000);
     driver.findElements({
         'css': 'div.contact_item.on'
     }).
-    then (function (collection) {
+        then (function (collection) {
         //var len = collection.length, i=0;
         collection.map(function (item) {
             var contactItem = item;
@@ -380,34 +487,6 @@ function _findOnePro(id, callback){
         });
     });
 }
-WcBot.prototype._walkChatList = function(callback){
-    var self = this;
-    driver.findElements({'css': 'div[ng-repeat*="chatContact"]'})
-        .then(function(collection){
-            function iterator(index){
-                var item = currItem = collection[index];
-                item.findElement({'css': 'i.web_wechat_reddot_middle.icon'})
-                    .then(function(iblock){
-                        var iblockTemp = iblock;
-                        item.findElement({'css': 'span.nickname_text'})
-                            .then(function(h3El){
-                                h3El.getText()
-                                    .then(function(txt){
-                                        return pollingDispatcher(txt)(self, iblockTemp, currItem, callback);
-                                    })
-                            })
-                    })
-                    .thenCatch(function(){
-                        return iterator(index+1)
-                    })
-            }
-            iterator(0);
-        })
-        .thenCatch(function(err){
-            return callback(err);
-        })
-};
-
 function pollingDispatcher(input){
     //var handlers = {
     //    '朋友推荐消息': function(self, item, parentItem, callback){
@@ -702,74 +781,6 @@ function replayMsg(self, count){
     //self._walkCurrList(count, callback);
     self._reply(count);
 }
-WcBot.prototype._reply = function(count){
-    driver.findElement({'id':'editArea'}).sendKeys("这个一个检测机器人，主人正在睡觉，请勿打扰");
-    driver.findElement({css:'.btn_send'}).click();
-};
-WcBot.prototype.onReceive = function(handler){
-    var self = this;
-    this.on('receive', function(data){
-        var err = data.err;
-        var data = data.data;
-        handler.call(self, err, data);
-    });
-};
-WcBot.prototype.onAddContact = function(handler){
-    console.log("!!!!!!!!!!!!!!!!!!!!!!")
-    var self = this;
-    this.on('contactAdded', function(data){
-        console.log("#####################");
-        console.log(data);
-        var err = data.err;
-        var data = data.data;
-        handler.call(self, err, data);
-    });
-};
-WcBot.prototype._walkCurrList = function(unReadCount, callback){
-    if(!callback){
-        callback = unReadCount;
-        unReadCount = null;
-    }
-    var self = this;
-    //init chat cache
-    !chatCache[self.sendTo] && (chatCache[self.sendTo] = 0);
-    //cache update
-    unReadCount && (chatCache[self.sendTo] = (chatCache[self.sendTo] || 0) + unReadCount);
-    //walk dom
-    driver.findElement({'css': '#chatArea'})
-        .then(function(chatwrapper){
-            chatwrapper.findElements({'css': '.bubble_default'}).then(function(collection){
-                var currCount = collection.length,
-                    readedCount = chatCache[self.sendTo];
-                if(!unReadCount){
-                    if(readedCount === currCount){
-                        return callback();
-                    }
-                    unReadCount = currCount - readedCount;
-                    chatCache[self.sendTo] = currCount;
-                }
-                var unreadArr = collection.slice(-unReadCount);
-                if(unreadArr.length === 0) return callback();
-                unreadArr.map(function(item){
-                    item.findElement({'css': 'pre.js_message_plain'}).then(function(preEl){
-                        preEl.getText().then(function(payLoad){
-                            //self.emit('receive', {
-                            //    from: self.sendTo,
-                            //    payLoad: payLoad
-                            //});
-                            replayMsg(self, null, callback);
-                            //return callback();
-                        })
-                    })
-                })
-            })
-        })
-        .thenCatch(function(){
-            return callback();
-        })
-};
-WcBot.prototype._analysisPayload =function(){
 
-};
 module.exports = WcBot;
 

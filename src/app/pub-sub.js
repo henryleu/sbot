@@ -1,37 +1,33 @@
 var subClient = require('../app/redis-client')('sub');
 var pubClient = require('../app/redis-client')('pub');
 var service = require('./service');
-const pubSubService = {
+var pubSubService = {
     pubClient: pubClient,
     subClient: subClient
 };
-const channels = [
+var channels = [
     'send',
     'readProfile',
     'onReceive',
     'onAddContact'
 ];
 service.start();
-channels.forEach((channel)=>{
+channels.forEach(function(channel){
     pubSubService.subClient.subscribe(channel);
 });
-pubSubService.subClient.on('message', (channel, msg)=>{
+pubSubService.subClient.on('message', function(channel, msg){
     eval(channel + 'Handler').call(null, channel, msg);
 });
 function onReceiveHandler(channel, msg){
-    service.onReceive((err, msgPack)=>{
-        console.log("receive-----------------------")
-        console.log(msgPack)
-        msgPack.msgArr.forEach((data)=>{
+    service.onReceive(function(err, msgPack){
+        msgPack.msgArr.forEach(function(data){
             pubSubService.pubClient.publish('sbot:onReceive', JSON.stringify({err: err, data: data}));
         });
     });
     return;
 }
 function onAddContactHandler(channel, msg){
-    console.log("&&&&&&&&&&&&&&&&&&&&&&&&&&");
-    console.log(msg);
-    service.onAddContact((err, data)=>{
+    service.onAddContact(function(err, data){
         if(err) return console.log(err);
         pubSubService.pubClient.publish('sbot:onAddContact', JSON.stringify({err: err, data: data}));
     });
@@ -41,16 +37,13 @@ function sendHandler(channel, msg){
     var msgJson = JSON.parse(msg);
     //msg = { ToUserName:xxx, MsgType:'text/voice/image', Content:String, Url:MediaUrl}
     if(msgJson.MsgType === 'text'){
-        service.send({sendTo: msgJson.ToUserName, content: msgJson.Content}, (err, data)=>{
-            console.log("---------------------------");
-            console.log(err)
-            console.log(data);
+        service.send({sendTo: msgJson.ToUserName, content: msgJson.Content}, function(err, data){
             if(err) console.log('error occur------' + JSON.stringify(err));
             pubSubService.pubClient.publish('sbot:' + channel, JSON.stringify({err: err, data: msgJson}));
         });
     }
     if(msgJson.MsgType === 'image' || msgJson.MsgType === 'voice' && msgJson.Url){
-        service.send({sendTo: msgJson.ToUserName, content: msgJson.Url}, (err, data)=>{
+        service.send({sendTo: msgJson.ToUserName, content: msgJson.Url}, function(err, data){
             if(err) console.log('error occur------' + JSON.stringify(err));
             pubSubService.pubClient.publish('sbot:' + channel, JSON.stringify({err: err, data: msgJson}));
         });
@@ -59,11 +52,8 @@ function sendHandler(channel, msg){
 }
 function readProfileHandler(channel, msg){
     //msg = {bid: String}
-    console.log("&&&&&&&&&&&&&&&&&&&&&&");
-    console.log(msg);
     var msgJson = JSON.parse(msg);
-    console.log(msgJson);
-    service.readProfile(msgJson.bid, (err, data)=>{
+    service.readProfile(msgJson.bid, function(err, data){
         if(err) console.log('error occur------' + JSON.stringify(err));
         pubSubService.pubClient.publish('sbot:' + channel, JSON.stringify({err: err, data: data}));
     });
