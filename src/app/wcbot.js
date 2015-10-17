@@ -233,7 +233,7 @@ WcBot.prototype._walkCurrList = function(unReadCount, callback){
         })
 };
 WcBot.prototype._analysisPayload =function(){
-
+    //TODO
 };
 
 function _readProfile(bid, self, callback){
