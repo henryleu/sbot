@@ -12,13 +12,20 @@ var channelMap = {
     onAddContact: 'onAddContact',
     onDisconnect: 'onDisconnect'
 };
-service.start();
-Object.keys(channelMap).forEach(function(channel){
-    pubSubService.subClient.subscribe(channel);
-});
+
+//subscribe channel send and channel readProfile
+pubSubService.subClient.subscribe('send');
+pubSubService.subClient.subscribe('readProfile');
+
+//listen message event from athena
 pubSubService.subClient.on('message', function(channel, msg){
     channelMap[channel + 'Handler'].call(null, channel, msg);
 });
+
+//launch chrome client and ready to login
+service.start();
+
+//event handler
 function onDisconnectHandler(channel, msg){
     service.onDisconnect(function(data){
         pubSubService.pubClient.publish('sbot:onDisconnect', data.weChatBotId);
