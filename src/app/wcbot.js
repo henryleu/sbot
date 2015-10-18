@@ -38,7 +38,7 @@ WcBot.prototype.start = function(){
     var self = this;
     self._login(function(){
         //var url = 'http://wx.qq.com/cgi-bin/mmwebwx-bin/webwxgetmsgimg?&MsgID=6159434111060829045&skey=%40crypt_a24ceaa9_405fcaf18a5981c30cbf68d5953cd4c3';
-        var url = 'http://wx.qq.com/';
+        var url = 'http://wx.qq.com/?lang=zh_CN';
         driver.manage().getCookies().then(function(cookies){
             cookies.forEach(function(cookie){
                 var requestCookie = request.cookie(cookie.name + '=' + cookie.value);
@@ -101,7 +101,9 @@ WcBot.prototype.readProfile = function(bid, callback){
  */
 WcBot.prototype.onReceive = function(handler){
     var self = this;
-    this.on('receive', function(data){
+    this.removeAllListeners('receive').on('receive', function(data){
+        console.log('~~~~~~~~~~~~~~~~~~~~~');
+        console.log(data);
         var err = data.err;
         var data = data.data;
         handler.call(self, err, data);
@@ -113,7 +115,7 @@ WcBot.prototype.onReceive = function(handler){
  */
 WcBot.prototype.onAddContact = function(handler){
     var self = this;
-    this.on('contactAdded', function(data){
+    this.removeAllListeners('contactAdded').on('contactAdded', function(data){
         var err = data.err;
         var data = data.data;
         handler.call(self, err, data);
@@ -138,7 +140,7 @@ WcBot.prototype._listenCurrUser = function(){
 };
 WcBot.prototype._login = function(callback){
     var self = this;
-    driver.get('https://wx.qq.com');
+    driver.get('https://wx.qq.com/?lang=zh_CN');
     driver.wait(function() {
         driver.isElementPresent(avatarLocator).then(function(present) {
             if(!loggedIn && present){
@@ -472,19 +474,20 @@ function _findOnePro(id, callback){
         //var len = collection.length, i=0;
         collection.map(function (item) {
             var contactItem = item;
-            item.findElement({'css': 'h4.nickname'}).then(function(infoItem){
-                infoItem.getText().
-                    then(function (value) {
-                        //i++;
-                        if (value === id) {
-                            contactItem.click().then(function(){
-                                callback(null, null);
-                            })
-                        }
-                        //else if(i === len){
-                        //    callback(new Error('user does not exist'));
-                        //}
-                    });
+            item.findElement({'css': 'h4.nickname'})
+                .then(function(infoItem){
+                    infoItem.getText().
+                        then(function (value) {
+                            //i++;
+                            if (value === id) {
+                                contactItem.click().then(function(){
+                                    callback(null, null);
+                                })
+                            }
+                            //else if(i === len){
+                            //    callback(new Error('user does not exist'));
+                            //}
+                        });
             });
         });
     });
