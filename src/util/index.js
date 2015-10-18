@@ -1,3 +1,4 @@
 module.exports = {
-    waitFor: require('./waitFor')
+    waitFor: require('./waitFor'),
+    getCount: require('./getCount')
 };

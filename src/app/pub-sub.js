@@ -5,19 +5,25 @@ var pubSubService = {
     pubClient: pubClient,
     subClient: subClient
 };
-var channels = [
-    'send',
-    'readProfile',
-    'onReceive',
-    'onAddContact'
-];
+var channelMap = {
+    send: 'send',
+    readProfile: 'readProfile',
+    onReceive: 'onReceive',
+    onAddContact: 'onAddContact',
+    onDisconnect: 'onDisconnect'
+};
 service.start();
-channels.forEach(function(channel){
+Object.keys(channelMap).forEach(function(channel){
     pubSubService.subClient.subscribe(channel);
 });
 pubSubService.subClient.on('message', function(channel, msg){
-    eval(channel + 'Handler').call(null, channel, msg);
+    channelMap[channel + 'Handler'].call(null, channel, msg);
 });
+function onDisconnectHandler(channel, msg){
+    service.onDisconnect(function(data){
+        pubSubService.pubClient.publish('sbot:onDisconnect', data.weChatBotId);
+    })
+}
 function onReceiveHandler(channel, msg){
     service.onReceive(function(err, msgPack){
         msgPack.msgArr.forEach(function(data){

@@ -5,6 +5,7 @@ var genHelper = require('./webdriver-helper');
 var EventEmitter = require('events').EventEmitter;
 var driver = new webdriver.Builder().withCapabilities(webdriver.Capabilities.chrome()).build();
 var waitFor = require('../util').waitFor;
+var getCount = require('../util').getCount;
 var request = require('request');
 var j = request.jar();
 var fs = require('fs');
@@ -13,6 +14,7 @@ var flow = webdriver.promise.controlFlow();
 var findSuffix = require('./suffix-map').findSuffix;
 var initialed = false;
 var loggedIn = false;
+var disconnect = false;
 var avatarLocator = webdriver.By.css('div.header > div.avatar');
 var searchLocator = webdriver.By.className('frm_search');
 var receiveRestLocator = webdriver.By.css('div.chat_list div.top');
@@ -21,7 +23,8 @@ var fsServer = 'http://ci.www.wenode.org/api/file/upload';
 var PromiseBB = require('bluebird');
 var chatCache = {};
 var currInteral = {};
-
+var reconnectTime = 12*60*60*1000;
+var athenaUrl = "";
 
 function WcBot(id){
     EventEmitter.call(this);
@@ -36,28 +39,7 @@ util.inherits(WcBot, EventEmitter);
  */
 WcBot.prototype.start = function(){
     var self = this;
-    self._login(function(){
-        //var url = 'http://wx.qq.com/cgi-bin/mmwebwx-bin/webwxgetmsgimg?&MsgID=6159434111060829045&skey=%40crypt_a24ceaa9_405fcaf18a5981c30cbf68d5953cd4c3';
-        var url = 'http://wx.qq.com/?lang=zh_CN';
-        driver.manage().getCookies().then(function(cookies){
-            cookies.forEach(function(cookie){
-                var requestCookie = request.cookie(cookie.name + '=' + cookie.value);
-                j.setCookie(requestCookie, url);
-            });
-            polling();
-        });
-        function polling(){
-            console.log("polling---------------");
-            setTimeout(function(){
-                //add property id, add queue api already in
-                return taskQueue.enqueue(self._walkChatList.bind(self), null, function(){
-                    polling();
-
-                })
-            }, 1000);
-        }
-    });
-
+    self._login(self._polling);
 };
 /**
  * Send a msg to a contact
@@ -71,19 +53,19 @@ WcBot.prototype.send = function(json, callback) {
     //if(!initialed || json.sendTo != self.sendTo){
     //    self.sendTo = json.sendTo;
     //    console.log(self.sendTo)
-    taskQueue.enqueue(self._findOne.bind(self));
+    //taskQueue.enqueue(self._findOne.bind(self));
     //}
+    taskQueue.enqueue(self._findOne.bind(self), null, callback);
     taskQueue.enqueue(function(cb){
         driver.findElement({'id':'editArea'}).sendKeys(content);
-        driver.findElement({css:'.btn_send'}).click().then(function(){
-            chatCache[self.sendTo] = !chatCache[self.sendTo]? 1 : chatCache[self.sendTo]+1;
-            receiveReset(function(){
-                cb()
-            })
-        });
-    }, null, function(){
-        callback()
-    });
+        driver.findElement({css:'.btn_send'}).click()
+            .then(function(){
+                chatCache[self.sendTo] = !chatCache[self.sendTo]? 1 : chatCache[self.sendTo]+1;
+                receiveReset(function(){
+                    cb()
+                })
+            });
+    }, null, callback);
     initialed = true;
 };
 /**
@@ -102,8 +84,6 @@ WcBot.prototype.readProfile = function(bid, callback){
 WcBot.prototype.onReceive = function(handler){
     var self = this;
     this.removeAllListeners('receive').on('receive', function(data){
-        console.log('~~~~~~~~~~~~~~~~~~~~~');
-        console.log(data);
         var err = data.err;
         var data = data.data;
         handler.call(self, err, data);
@@ -129,15 +109,76 @@ WcBot.prototype.onAddContact = function(handler){
  */
 WcBot.prototype.addContact = function(id, encodeId, callback){
     var self = this;
-    taskQueue.enqueue(_addContact.bind(self), {args:[id, encodeId], priority: 1, context: self}, function(){
-        callback();
-    });
+    taskQueue.enqueue(_addContact.bind(self), {args:[id, encodeId], priority: 1, context: self}, callback);
+};
+/**
+ * Attach a listener to a disconnect event
+ * @param handler
+ */
+WcBot.prototype.onDisconnect = function(handler){
+    this.removeAllListeners('disconnect').on('disconnect', handler);
 };
 
+/**
+ * ready to polling
+ * @private
+ */
+WcBot.prototype._polling = function(){
+    var self = this;
+    //var url = 'http://wx.qq.com/cgi-bin/mmwebwx-bin/webwxgetmsgimg?&MsgID=6159434111060829045&skey=%40crypt_a24ceaa9_405fcaf18a5981c30cbf68d5953cd4c3';
+    var url = 'http://wx.qq.com/?lang=zh_CN';
+    driver.manage().getCookies().then(function(cookies){
+        cookies.forEach(function(cookie){
+            var requestCookie = request.cookie(cookie.name + '=' + cookie.value);
+            j.setCookie(requestCookie, url);
+        });
+        polling();
+    });
+    //define the polling function
+    function polling(){
+        console.log("polling---------------");
+        setTimeout(function(){
+            //pre task, check the client disconnected or not
+            if(getCount()%3 === 0){
+                return taskQueue.enqueue(self._LoginOrNot.bind(self), null, function(err, data){
+                    if(err){
+                        return console.error(err);
+                    }
+                    if(data === true){
+                        //wait for reconnect
+                        self.emit('disconnect', {weChatBotId: self.id});
+                        waitFor(driver, avatarLocator, reconnectTime)
+                            .then(function(){
+                                return driver.sleep(3000);
+                            })
+                            .then(function(){
+                                polling();
+                            })
+                            .thenCatch(function(){
+                                console.error('reconnect time out');
+                            })
+                    } else {
+                        return taskQueue.enqueue(self._walkChatList.bind(self), null, polling);
+                    }
+                });
+            }
+            return taskQueue.enqueue(self._walkChatList.bind(self), null, polling);
+        }, 1000);
+    }
+};
+/**
+ * listen the current user whether a message came in
+ * @private
+ */
 WcBot.prototype._listenCurrUser = function(){
     var self = this;
     currInteral = setInterval(self._walkCurrList.bind(self), 200);
 };
+/**
+ * launch a chrome client and ready to login
+ * @param callback
+ * @private
+ */
 WcBot.prototype._login = function(callback){
     var self = this;
     driver.get('https://wx.qq.com/?lang=zh_CN');
@@ -156,14 +197,30 @@ WcBot.prototype._login = function(callback){
     }, 60*1000);
     self.once('login', callback);
 };
+/**
+ * reply a message to the current user
+ * @param count
+ * @private
+ */
 WcBot.prototype._reply = function(count){
     driver.findElement({'id':'editArea'}).sendKeys("这个一个检测机器人，主人正在睡觉，请勿打扰");
     driver.findElement({css:'.btn_send'}).click();
 };
+/**
+ * search the sender in contacts
+ * @param callback
+ * @returns {Promise}
+ * @private
+ */
 WcBot.prototype._findOne = function(callback){
     var self = this;
     return _findOnePro(self.sendTo, callback)
 };
+/**
+ * walk in left panel, check to whether messages arrived
+ * @param callback
+ * @private
+ */
 WcBot.prototype._walkChatList = function(callback){
     var self = this;
     driver.findElements({'css': 'div[ng-repeat*="chatContact"]'})
@@ -191,6 +248,12 @@ WcBot.prototype._walkChatList = function(callback){
             return callback(err);
         })
 };
+/**
+ * walk in right chat area, check to whether messages arrived
+ * @param unReadCount
+ * @param callback
+ * @private
+ */
 WcBot.prototype._walkCurrList = function(unReadCount, callback){
     if(!callback){
         callback = unReadCount;
@@ -234,10 +297,61 @@ WcBot.prototype._walkCurrList = function(unReadCount, callback){
             return callback();
         })
 };
+/**
+ * analysis the payload in message
+ * @private
+ */
 WcBot.prototype._analysisPayload =function(){
     //TODO
 };
+/**
+ * validator of login or not
+ * @param callback
+ * @private
+ */
+WcBot.prototype._LoginOrNot = function(callback){
+    driver.isElementPresent(avatarLocator)
+        .then(function(present) {
+            if(present){
+                return callback(null, null);
+            }
+            getLoginQr(callback);
+        });
+};
 
+function getLoginQr(callback){
+    waitFor(driver, {css: '.qrcode img'}, 50000)
+        .then(function(){
+            return driver.findElement({css: '.qrcode img'});
+        })
+        .then(function(img){
+            img.getAttribute('src')
+                .then(function(src){
+                    request
+                        .get({url: src, jar: j})
+                        .on('error', function(err){
+                            console.error('Failed to get qr from weixin when client disconnect' + err);
+                            return callback(new Error('Failed to get qr'), null);
+                        })
+                        .pipe(request.post(athenaUrl))
+                        .on('error', function(){
+                            console.error('Failed to upload the qr buffer to file server client disconnect' + err);
+                            return callback(new Error('Failed to upload qr'), null);
+                        })
+                        .on('close', function(){
+                            return callback(null, true)
+                        });
+                })
+                .thenCatch(function(e){
+                    console.error('Failed to get img attribute when client disconnect');
+                    return callback(e, null);
+                })
+        })
+        .thenCatch(function(e){
+            console.error('Failed to find img node when client disconnect');
+            return callback(e, null);
+        })
+}
 function _readProfile(bid, self, callback){
     var box;
     _findOnePro(bid, function(){
@@ -265,7 +379,6 @@ function _readProfile(bid, self, callback){
                     })
             })
             .then(function(){
-                console.log("@@@@@@@@@@@@@@@@@@@@@@");
                 _readProfileChain(function(err, data){
                     if(err){
                         throw new Error('Failed to read Profile Chain');
@@ -281,35 +394,24 @@ function _readProfile(bid, self, callback){
     });
 }
 function _readProfileChain(callback){
-    console.log("!!!!!!!!!!!!!!!!!!!");
     var data = {},
         pop;
     driver.findElement({'css': 'div#mmpop_profile>div.profile_mini'})
         .then(function(popItem){
-            console.log("@@@@@@@@@@@@@@@@@@");
-            console.log(popItem)
             pop = popItem;
             return pop.findElement({'css': 'div.profile_mini_hd img'})
                 .then(function(headImg){
-                    console.log("##################");
-                    console.log(headImg)
                     return headImg.getAttribute('src')
                 })
                 .then(function(src){
-                    console.log("$$$$$$$$$$$$$$$$");
-                    console.log(src)
                     return data.headUrl = src;
                 })
         })
         .then(function(src){
             return pop.findElement({'css': 'div.profile_mini_bd>div.nickname_area h4'})
                 .then(function(h4){
-                    console.log("%%%%%%%%%%%%%%%%%%")
-                    console.log(h4);
                     h4.getText()
                         .then(function(txt){
-                            console.log("^^^^^^^^^^^^^^^^^^")
-                            console.log(txt);
                             return data.nickName = txt;
                         })
                 })
@@ -317,28 +419,19 @@ function _readProfileChain(callback){
         .then(function(){
             return pop.findElement({'css': 'div.profile_mini_bd>div.meta_area>div.meta_item:nth-child(1) p'})
                 .then(function(bidItem){
-                    console.log("&&&&&&&&&&&&&&&");
-                    console.log(bidItem);
                     return bidItem.getText()
                 })
                 .then(function(bidtxt){
-                    console.log("****************");
-                    console.log(bidtxt);
                     return data.bid = bidtxt;
                 })
         })
         .then(function(){
             return pop.findElement({'css': 'div.profile_mini_bd>div.meta_area>div.meta_item:nth-child(2) p'})
                 .then(function(placeItem){
-                    console.log("****************");
-                    console.log(placeItem);
                     return placeItem.getText()
                 })
                 .then(function(placetxt){
-                    console.log("****************");
-                    console.log(placetxt);
                     data.place = placetxt;
-                    console.log(data)
                     receiveReset(function(){
                         return callback(null, data);
                     });
@@ -429,7 +522,6 @@ function _modifyRemarkAsync(codeTmp){
                 })
         })
         .then(function(){
-            console.log("======================");
             return item.findElement({'css': 'div.meta_area p'})
         })
         .then(function(itemp){
@@ -484,9 +576,20 @@ function _findOnePro(id, callback){
                                     callback(null, null);
                                 })
                             }
-                            //else if(i === len){
-                            //    callback(new Error('user does not exist'));
-                            //}
+                            else if(i === len){
+                                receiveReset(function(){
+                                    driver.findElement(searchLocator)
+                                        .then(function(searchInput){
+                                            return searchInput.clear();
+                                        })
+                                        .then(function(){
+                                            callback(new Error('user does not exist'));
+                                        })
+                                        .thenCatch(function(e){
+                                            callback(new Error('Failed to clear search input'));
+                                        })
+                                });
+                            }
                         });
             });
         });
@@ -558,9 +661,6 @@ function pollingDispatcher(input){
                     return _modifyRemarkAsync()
                 })
                 .then(function(profile){
-                    console.log("%%%%%%%%%%%%%%%%%%%");
-                    console.log(profile);
-                    console.log(self);
                     self.emit('contactAdded', {err: null, data: {bid: profile.code, nickName: profile.nickName}});
 
                 })
@@ -573,11 +673,7 @@ function pollingDispatcher(input){
                     return driver.executeScript('return document.querySelector(".chat_bd").clientWidth')
                 })
                 .then(function(width){
-                    console.log("{{{{{{{{{{{{{{{{{{{{{{{{");
-                    console.log(width);
-                    console.log(typeof width);
                     posX = parseInt(width, 10) - 10;
-                    console.log(webdriver.Button.RIGHT);
                     return new webdriver.ActionSequence(driver)
                         .mouseMove(chatArea, {x: posX, y:0})
                         .click(chatArea,  webdriver.Button.RIGHT)
@@ -627,8 +723,6 @@ function spiderContent(self, unReadCount, callback){
             return chatwrapper.findElements({'css': '.js_message_bubble'})
         })
         .then(function(collection){
-            console.log("^^^^^^^^^^^^^^^^^^^^");
-            console.log(collection.length);
             var unreadArr = collection.slice(-unReadCount);
             var PromiseArr = [];
             unreadArr.forEach(function(item){
@@ -653,10 +747,7 @@ function spiderContent(self, unReadCount, callback){
                 return item.getAttribute('class')
             })
             .then(function(className){
-                console.log("className###################")
-                console.log(className);
                 if(className === 'plain'){
-                    console.log("***********************")
                     currNode.findElement({'css': 'pre.js_message_plain'})
                     .then(function(preEl){
                         preEl.getText().then(function(payLoad){
@@ -674,19 +765,16 @@ function spiderContent(self, unReadCount, callback){
                     })
                 }
                 if(className === 'picture'){
-                    console.log("enter pic----------------");
+                    console.log("receive a img message----------------");
                     currNode.findElement({'css': '.msg-img'})
                     .then(function(img){
-                        console.log("img----------------");
-                        console.log(img);
                         return img.getAttribute('src')
                     })
                     .then(function(src){
-                        console.log("src----------------" + src);
                         return getMediaUrl(src)
                     })
                     .then(function(url){
-                        console.log("url----------------" + url);
+                        console.log("img url----------------" + url);
                         getMediaFile(url, function(err, res){
                             if(err){
                                 return callback(err, null)
@@ -776,12 +864,10 @@ function spiderContent(self, unReadCount, callback){
 function receiveReset(callback){
     return driver.findElement(receiveRestLocator)
         .then(function(item){
-            console.log("-----------------------------")
             return item.click()
                 .then(function(){
                     item.click()
                         .then(function(){
-                            console.log("============================");
                             return callback()
                         })
                 })
