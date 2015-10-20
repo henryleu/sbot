@@ -36,4 +36,4 @@ TaskQueue.prototype.next = function(){
     }
     taskWrapper.task(taskCallback);
 }
-module.exports = new TaskQueue(1);
+module.exports = TaskQueue;

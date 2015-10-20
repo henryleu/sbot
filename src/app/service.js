@@ -1,2 +1,2 @@
 var WcBot = require('./wcbot');
-module.exports = new WcBot();
+module.exports = WcBot;
