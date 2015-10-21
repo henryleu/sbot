@@ -1,5 +1,7 @@
 var TaskQueue = require('./TasksQueue');
 var codeService = require('../services/codeService');
+var PromiseBB = require('bluebird');
+var settings = require('../app/settings');
 var webdriver = require('selenium-webdriver');
 var EventEmitter = require('events').EventEmitter;
 var waitFor = require('../util').waitFor;
@@ -12,11 +14,10 @@ var avatarLocator = webdriver.By.css('div.header > div.avatar');
 var searchLocator = webdriver.By.className('frm_search');
 var receiveRestLocator = webdriver.By.css('div.chat_list div.top');
 var searchedContactLocator = webdriver.By.css(' div[data-height-calc=heightCalc]:nth-child(2) > div');
-var fsServer = 'http://ci.www.wenode.org/api/file/upload';
-var PromiseBB = require('bluebird');
+var fsServer = settings.fsUrl;
 var chatCache = {};
 var currInteral = {};
-var reconnectTime = 12*60*60*1000;
+var reconnectTime = settings.reconnectTime;
 
 function WcBot(id){
     EventEmitter.call(this);
@@ -78,7 +79,6 @@ WcBot.prototype.send = function(json, callback) {
     var content = json.content;
     self.taskQueue.enqueue(self._findOne.bind(self), null, callback);
     self.taskQueue.enqueue(function(cb){
-        console.log('find ok---------');
         self.driver.findElement({'id':'editArea'}).sendKeys(content);
         self.driver.findElement({css:'.btn_send'}).click()
             .then(function(){
@@ -675,8 +675,6 @@ function _findOnePro(self, id, callback){
         'css': 'div.contact_item.on'
     }).
         then (function (collection) {
-        console.log('collection---------');
-        console.log(collection);
         var len = collection.length;
         var i=0;
         collection.map(function (item) {

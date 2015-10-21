@@ -35,13 +35,16 @@ pubSubService.subClient.subscribe('sbot:profile-request');
 
 //listen message event from athena
 pubSubService.subClient.on('message', function(channel, message){
-    console.log(message);
     try{
         var msg = JSON.parse(message);
+        if(channelMap[channel]){
+            channelMap[channel].call(null, channel, msg);
+        }else{
+            throw new Error('channel ' + channel + ': does not exist');
+        }
     }catch(e){
         console.error(e);
     }
-    channelMap[channel].call(null, channel, msg);
 });
 
 //event handler
