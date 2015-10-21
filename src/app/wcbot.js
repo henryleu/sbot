@@ -247,7 +247,7 @@ WcBot.prototype._login = function(callback){
                     })
                     .thenCatch(function(e){
                         //TODO
-                        self.close()
+                        self.stop()
                             .then(function(){
                                 self.start();
                             });
