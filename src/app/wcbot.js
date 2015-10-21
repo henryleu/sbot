@@ -78,6 +78,7 @@ WcBot.prototype.send = function(json, callback) {
     var content = json.content;
     self.taskQueue.enqueue(self._findOne.bind(self), null, callback);
     self.taskQueue.enqueue(function(cb){
+        console.log('find ok---------');
         self.driver.findElement({'id':'editArea'}).sendKeys(content);
         self.driver.findElement({css:'.btn_send'}).click()
             .then(function(){
@@ -243,7 +244,15 @@ WcBot.prototype._login = function(callback){
                             self.loggedIn = true;
                             callback(null, null);
                         }
-                    });
+                    })
+                    .thenCatch(function(e){
+                        //TODO
+                        self.close()
+                            .then(function(){
+                                self.start();
+                            });
+                        console.error(e);
+                    })
             }, 2000);
         })
         .thenCatch(function(e){
@@ -499,7 +508,7 @@ function _readProfileChain(self, callback){
                     return headImg.getAttribute('src')
                 })
                 .then(function(src){
-                    return data.headUrl = src;
+                    return data.headIconUrl = src;
                 })
         })
         .then(function(src){
@@ -507,7 +516,7 @@ function _readProfileChain(self, callback){
                 .then(function(h4){
                     h4.getText()
                         .then(function(txt){
-                            return data.nickName = txt;
+                            return data.nickname = txt;
                         })
                 })
         })
@@ -527,6 +536,7 @@ function _readProfileChain(self, callback){
                 })
                 .then(function(placetxt){
                     data.place = placetxt;
+                    data.botid = self.id;
                     receiveReset(self, function(){
                         return callback(null, data);
                     });
@@ -665,20 +675,25 @@ function _findOnePro(self, id, callback){
         'css': 'div.contact_item.on'
     }).
         then (function (collection) {
-        //var len = collection.length, i=0;
+        console.log('collection---------');
+        console.log(collection);
+        var len = collection.length;
+        var i=0;
         collection.map(function (item) {
             var contactItem = item;
             item.findElement({'css': 'h4.nickname'})
                 .then(function(infoItem){
                     infoItem.getText().
                         then(function (value) {
-                            //i++;
+                            i++;
                             if (value === id) {
                                 contactItem.click().then(function(){
                                     callback(null, null);
-                                })
+                                });
+                                return;
                             }
                             else if(i === len){
+                                //send to is not exist
                                 receiveReset(self, function(){
                                     self.driver.findElement(searchLocator)
                                         .then(function(searchInput){
@@ -693,39 +708,12 @@ function _findOnePro(self, id, callback){
                                 });
                             }
                         });
-            });
+                });
         });
     });
 }
 
 function pollingDispatcher(input){
-    //var handlers = {
-    //    '朋友推荐消息': function(self, item, parentItem, callback){
-    //        parentItem.click()
-    //            .then(function(){
-    //                return driver.sleep(500);
-    //            })
-    //            .then(function(){
-    //                return _findOneInChatAysnc()
-    //                    .then(function(){
-    //                        return _modifyRemarkAsync()
-    //                    })
-    //                    .then(function(profile){
-    //                        console.log("%%%%%%%%%%%%%%%%%%%");
-    //                        console.log(profile);
-    //                        console.log(self);
-    //                        self.emit('contactAdded', {err: null, data: {bid: profile.code, nickName: profile.nickName}});
-    //                        driver.sleep(500).then(function(){
-    //                            return receiveReset(callback);
-    //                        })
-    //                    })
-    //                    .thenCatch(function(err){
-    //                        console.log("Failed to add contact----");
-    //                        console.log(err);
-    //                        callback();
-    //                    })
-    //            })
-    //    },
     var handlers = {
         '朋友推荐消息': function(self, item, parentItem, callback){
             parentItem.click()
@@ -777,7 +765,7 @@ function pollingDispatcher(input){
                 })
                 .then(function(width){
                     posX = parseInt(width, 10) - 10;
-                    return new webdriver.ActionSequence(driver)
+                    return new webdriver.ActionSequence(self.driver)
                         .mouseMove(chatArea, {x: posX, y:0})
                         .click(chatArea,  webdriver.Button.RIGHT)
                         .perform();
@@ -805,7 +793,7 @@ function pollingDispatcher(input){
                     .then(function(){
                         spiderContent(self, count, function(err, msgArr){
                             if(msgArr){
-                                self.emit('receive', {err: null, data: {msgArr: msgArr, bid: input}});
+                                self.emit('receive', {err: null, data: {msgArr: msgArr}});
                             }
                             return receiveReset(self, callback);
                         })
@@ -845,6 +833,12 @@ function spiderContent(self, unReadCount, callback){
         });
     function _getContent(self, promise, callback){
         var currNode = null;
+        var msg = {
+            MsgId: codeService.fetch(),
+            FromUserName: self.sendTo,
+            ToUserName: self.id,
+            CreateTime: Math.ceil(parseInt(new Date().getTime(), 10)/1000).toString()
+        };
         promise.findElement({'css': '.bubble_cont >div'})
             .then(function(item){
                 currNode = item;
@@ -852,15 +846,11 @@ function spiderContent(self, unReadCount, callback){
             })
             .then(function(className){
                 if(className === 'plain'){
-                    currNode.findElement({'css': 'pre.js_message_plain'})
+                    return currNode.findElement({'css': 'pre.js_message_plain'})
                     .then(function(preEl){
                         preEl.getText().then(function(payLoad){
-                            var msg = {
-                                FromUserName: self.sendTo,
-                                Content: payLoad,
-                                MsgType: 'text',
-                                CreateTime: new Date().getTime()
-                            };
+                            msg['Content'] = payLoad;
+                            msg['MsgType'] = 'text';
                             return callback(null, msg);
                         })
                     })
@@ -870,7 +860,7 @@ function spiderContent(self, unReadCount, callback){
                 }
                 if(className === 'picture'){
                     console.log("receive a img message----------------");
-                    currNode.findElement({'css': '.msg-img'})
+                    return currNode.findElement({'css': '.msg-img'})
                     .then(function(img){
                         return img.getAttribute('src')
                     })
@@ -883,12 +873,8 @@ function spiderContent(self, unReadCount, callback){
                             if(err){
                                 return callback(err, null)
                             }
-                            var msg = {
-                                FromUserName: self.sendTo,
-                                MediaId: res,
-                                CreateTime: new Date().getTime(),
-                                MsgType: 'image'
-                            };
+                            msg['MediaId'] = res;
+                            msg['MsgType'] = 'image';
                             callback(null, msg);
                         })
                     })
@@ -897,18 +883,14 @@ function spiderContent(self, unReadCount, callback){
                     })
                 }
                 if(className === 'voice'){
-                    promise.getAttribute('data-cm').then(function(attr){
+                    return promise.getAttribute('data-cm').then(function(attr){
                         var obj = JSON.parse(attr);
                         getMediaFile('https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxgetvoice?msgid=' + obj.msgId, function(err, res){
                             if(err){
                                 return callback(err, null)
                             }
-                            var msg = {
-                                FromUserName: self.sendTo,
-                                MediaId: res,
-                                MsgType: 'voice',
-                                CreateTime: new Date()
-                            };
+                            msg['MediaId'] = res;
+                            msg['MsgType'] = 'voice';
                             callback(null, msg);
                         });
                     })
@@ -979,7 +961,7 @@ function receiveReset(self, callback){
         })
         .thenCatch(function(err){
             console.log("Failed to reset in list [code]-------");
-            console.log(err);
+            console.error(err);
         })
 }
 
