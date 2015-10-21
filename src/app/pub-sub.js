@@ -14,6 +14,9 @@ var Bots = (function(){
     Bots.prototype.setBot = function(bot){
         botsContainer[bot.id] = bot;
     };
+    Bots.prototype.removeBot = function(id){
+        delete botsContainer[id];
+    };
     Bots.prototype.getBots = function(){
         return botsContainer;
     };
@@ -35,6 +38,7 @@ pubSubService.subClient.subscribe('sbot:profile-request');
 
 //listen message event from athena
 pubSubService.subClient.on('message', function(channel, message){
+    console.log(message)
     try{
         var msg = JSON.parse(message);
         if(channelMap[channel]){
@@ -50,6 +54,10 @@ pubSubService.subClient.on('message', function(channel, message){
 //event handler
 function startHandler(channel, msg){
     //msg = {id:'id'}
+    if(bots.getBotById(msg.botid)){
+        console.log('the bot is started already.');
+        return;
+    }
     var service = new Service(msg.botid);
     service.onNeedLogin(function(err ,data){
         if(err) return console.log(err);
@@ -71,11 +79,10 @@ function startHandler(channel, msg){
 }
 
 function stopHandler(channel, msg){
-    //TODO
-    //var service = bots.getBotById(msg.id);
-    //msg = { ToUserName:xxx, MsgType:'text/voice/image', Content:String, Url:MediaUrl}
-    //service.stop();
-    return;
+    var service = bots.getBotById(msg.id);
+    service.stop().then(function(){
+        bots.removeBot(msg.id);
+    });
 }
 
 function sendHandler(channel, msg){
@@ -84,7 +91,6 @@ function sendHandler(channel, msg){
     service.send({sendTo: msg.ToUserName, content: msg.Content}, function(err, data){
         if(err) console.log('error occur------' + JSON.stringify(err));
     });
-    return;
 }
 
 function readProfileHandler(channel, msg){
@@ -95,6 +101,5 @@ function readProfileHandler(channel, msg){
         if(err) console.log('error occur------' + JSON.stringify(err));
         pubSubService.pubClient.publish('sbot:profile', JSON.stringify({err: err, data: data}));
     });
-    return;
 }
 module.exports = pubSubService;
