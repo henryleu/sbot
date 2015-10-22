@@ -74,6 +74,13 @@ WcBot.prototype.stop = function(){
             self.callCsToLogin = null;
             self.waitForLogin = null;
         })
+        .then(function(){
+            return new Promise(function(resolve, reject){
+                setTimeout(function(){
+                    resolve();
+                }, 3000)
+            })
+        })
 };
 
 /**
