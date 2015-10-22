@@ -38,7 +38,7 @@ pubSubService.subClient.subscribe('sbot:profile-request');
 
 //listen message event from athena
 pubSubService.subClient.on('message', function(channel, message){
-    console.log(message)
+    console.log(message);
     try{
         var msg = JSON.parse(message);
         if(channelMap[channel]){
@@ -47,7 +47,7 @@ pubSubService.subClient.on('message', function(channel, message){
             throw new Error('channel ' + channel + ': does not exist');
         }
     }catch(e){
-        console.error(e);
+        console.warn(e.message);
     }
 });
 
@@ -55,11 +55,11 @@ pubSubService.subClient.on('message', function(channel, message){
 function startHandler(channel, msg){
     //msg = {id:'id'}
     if(bots.getBotById(msg.botid)){
-        console.log('the bot is started already.');
+        console.warn('the bot is started already.');
         return;
     }
     var service = new Service(msg.botid);
-    service.onNeedLogin(function(err ,data){
+    service.onNeedLogin(function(err, data){
         if(err) return console.log(err);
         pubSubService.pubClient.publish('sbot:need-login', JSON.stringify({err: err, data: data}));
     });
@@ -79,14 +79,22 @@ function startHandler(channel, msg){
 }
 
 function stopHandler(channel, msg){
-    var service = bots.getBotById(msg.id);
+    var service = bots.getBotById(msg.botid);
+    if(!service){
+        console.warn('has no such bot[botid] = ' + msg.botid);
+        return;
+    }
     service.stop().then(function(){
-        bots.removeBot(msg.id);
+        bots.removeBot(msg.botid);
     });
 }
 
 function sendHandler(channel, msg){
     var service = bots.getBotById(msg.botid);
+    if(!service){
+        console.warn('has no such bot[botid] = ' + msg.botid);
+        return;
+    }
     //msg = { ToUserName:xxx, MsgType:'text/voice/image', Content:String, Url:MediaUrl}
     service.send({sendTo: msg.ToUserName, content: msg.Content}, function(err, data){
         if(err) console.log('error occur------' + JSON.stringify(err));
@@ -94,8 +102,12 @@ function sendHandler(channel, msg){
 }
 
 function readProfileHandler(channel, msg){
-    //msg = {bid: String}
     var service = bots.getBotById(msg.botid);
+    if(!service){
+        console.warn('has no such bot[botid] = ' + msg.botid);
+        return;
+    }
+    //msg = {bid: String}
     service.readProfile(msg.bid, function(err, data){
         console.log(data);
         if(err) console.log('error occur------' + JSON.stringify(err));

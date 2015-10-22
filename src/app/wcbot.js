@@ -54,17 +54,25 @@ WcBot.prototype.start = function(){
  * @return Promise
  */
 WcBot.prototype.stop = function(){
-    return this.driver.close()
+    var self = this;
+    return self.driver.close()
         .then(function(){
-            this.sendTo = null;
-            this.driver = new webdriver.Builder()
+            return new Promise(function(resolve, reject){
+                setTimeout(function(){
+                    resolve();
+                }, 2000)
+            })
+        })
+        .then(function(){
+            self.sendTo = null;
+            self.driver = new webdriver.Builder()
                 .withCapabilities(webdriver.Capabilities.chrome())
                 .setControlFlow(new webdriver.promise.ControlFlow())
                 .build();
-            this.taskQueue = new TaskQueue(1);
-            this.loggedIn = false;
-            this.callCsToLogin = null;
-            this.waitForLogin = null;
+            self.taskQueue = new TaskQueue(1);
+            self.loggedIn = false;
+            self.callCsToLogin = null;
+            self.waitForLogin = null;
         })
 };
 
@@ -164,7 +172,6 @@ WcBot.prototype.onDisconnect = function(handler){
  */
 WcBot.prototype._polling = function(){
     var self = this;
-    //var url = 'http://wx.qq.com/cgi-bin/mmwebwx-bin/webwxgetmsgimg?&MsgID=6159434111060829045&skey=%40crypt_a24ceaa9_405fcaf18a5981c30cbf68d5953cd4c3';
     var url = 'http://wx.qq.com/?lang=zh_CN';
     setCookiesAndPolling();
     function setCookiesAndPolling(){
@@ -177,6 +184,9 @@ WcBot.prototype._polling = function(){
         });
     }
     function polling(){
+        if(!self.loggedIn){
+            return;
+        }
         console.log("polling---------------");
         setTimeout(function(){
             //pre task, check the client disconnected or not
@@ -220,14 +230,14 @@ WcBot.prototype._login = function(callback){
         .then(function(){
             needLogin(self, function(err, media_id){
                 if(err){
-                    return console.error(err);
+                    return console.warn(err);
                 }
                 return;
             });
             self.callCsToLogin = setInterval(function(){
                 needLogin(self, function(err, media_id){
                     if(err){
-                        return console.error(err);
+                        return console.warn(err);
                     }
                 });
             }, 15*60*1000);
@@ -427,7 +437,7 @@ function getLoginQr(wcBot, callback){
                         }
                         var json = JSON.parse(body);
                         if(json.err){
-                            return call(json.err, null);
+                            return callback(json.err, null);
                         }
                         callback(null, json['media_id']);
                     });
@@ -451,7 +461,9 @@ function needLogin(wcBot, callback){
             self.emit('needLogin', {err: null, data:{media_id: media_id, botid: self.id}});
             return callback(null, null);
         }
-        callback(err, null);
+        self.stop().then(function(){
+            callback(err, null);
+        });
     })
 }
 
@@ -846,10 +858,24 @@ function spiderContent(self, unReadCount, callback){
                 if(className === 'plain'){
                     return currNode.findElement({'css': 'pre.js_message_plain'})
                     .then(function(preEl){
-                        preEl.getText().then(function(payLoad){
-                            msg['Content'] = payLoad;
-                            msg['MsgType'] = 'text';
-                            return callback(null, msg);
+                        return preEl.getText().then(function(payLoad){
+                            if(!payLoad){
+                                msg['Content'] = payLoad;
+                                msg['MsgType'] = 'text';
+                                return callback(null, msg);
+                            } else {
+                                return preEl.findElement({'css': 'img'})
+                                    .then(function(img){
+                                        return img.getAttribute('text');
+                                    })
+                                    .then(function(text){
+                                        //custom expression eg: [开心]_web
+                                        msg['Content'] = text.split('_')[0];
+                                        msg['MsgType'] = 'text';
+                                        callback(null, msg);
+                                    })
+                            }
+
                         })
                     })
                     .thenCatch(function(e){
