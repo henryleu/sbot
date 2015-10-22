@@ -192,10 +192,9 @@ WcBot.prototype._polling = function(){
             //pre task, check the client disconnected or not
             if(getCount()%3 === 0){
                 return self.taskQueue.enqueue(self._LoginOrNot.bind(self), null, function(err, data){
-                    if(err || data === true){
-                        self.loggedIn = false;
+                    if(err){
                         //client is disconnected, close the driver and start again
-                        self.emit('disconnect', {err: null, data:{botid: self.id}});
+                        self.loggedIn = false;
                         self.stop().then(function(){
                             self.start();
                         });
@@ -398,12 +397,12 @@ WcBot.prototype._LoginOrNot = function(callback){
             if(txt != '' && self.loggedIn){
                 return callback(null, null);
             }
-            needLogin(self, callback);
+            //needLogin(self, callback);
         })
         .thenCatch(function(e){
-            if(e.code == 7){
-                return needLogin(self, callback);
-            }
+            //if(e.code == 7){
+            //    return needLogin(self, callback);
+            //}
             callback(e, null);
         });
 };
