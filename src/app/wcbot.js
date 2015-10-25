@@ -18,15 +18,13 @@ var fsServer = settings.fsUrl;
 var chatCache = {};
 var currInteral = {};
 var reconnectTime = settings.reconnectTime;
+var createDriver = require('../webdriver/webdriverFactory');
 
 function WcBot(id){
     EventEmitter.call(this);
     this.id = id;
     this.sendTo = null;
-    this.driver = new webdriver.Builder()
-        .withCapabilities(webdriver.Capabilities.chrome())
-        .setControlFlow(new webdriver.promise.ControlFlow())
-        .build();
+    this.driver = createDriver();
     this.taskQueue = new TaskQueue(1);
     this.loggedIn = false;
     this.callCsToLogin = null;
@@ -55,7 +53,7 @@ WcBot.prototype.start = function(){
  */
 WcBot.prototype.stop = function(){
     var self = this;
-    return self.driver.close()
+    return self.driver.quit()
         .then(function(){
             return new Promise(function(resolve, reject){
                 setTimeout(function(){
@@ -65,10 +63,7 @@ WcBot.prototype.stop = function(){
         })
         .then(function(){
             self.sendTo = null;
-            self.driver = new webdriver.Builder()
-                .withCapabilities(webdriver.Capabilities.chrome())
-                .setControlFlow(new webdriver.promise.ControlFlow())
-                .build();
+            self.driver = createDriver();
             self.taskQueue = new TaskQueue(1);
             self.loggedIn = false;
             self.callCsToLogin = null;
@@ -92,17 +87,26 @@ WcBot.prototype.send = function(json, callback) {
     var self = this;
     self.sendTo = json.sendTo;
     var content = json.content;
-    self.taskQueue.enqueue(self._findOne.bind(self), null, callback);
-    self.taskQueue.enqueue(function(cb){
-        self.driver.findElement({'id':'editArea'}).sendKeys(content);
-        self.driver.findElement({css:'.btn_send'}).click()
-            .then(function(){
-                chatCache[self.sendTo] = !chatCache[self.sendTo]? 1 : chatCache[self.sendTo]+1;
-                receiveReset(self, function(){
-                    cb()
+    self.taskQueue.enqueue(function(cb) {
+        self._findOne(function () {
+            self.driver.findElement({'css': '#editArea'})
+                .then(function (item) {
+                    return item.sendKeys(content);
                 })
-            });
-    }, null, callback);
+                .then(function () {
+                    return self.driver.findElement({css: '.btn_send'})
+                })
+                .then(function (sendInput) {
+                    return sendInput.click()
+                })
+                .then(function () {
+                    receiveReset(self, cb);
+                })
+                .thenCatch(function (e) {
+                    console.log(e)
+                })
+        })
+    }, null, callback)
 };
 
 /**
@@ -179,7 +183,7 @@ WcBot.prototype.onDisconnect = function(handler){
  */
 WcBot.prototype._polling = function(){
     var self = this;
-    var url = 'http://wx.qq.com/?lang=zh_CN';
+    var url = settings.wxIndexUrl;
     setCookiesAndPolling();
     function setCookiesAndPolling(){
         self.driver.manage().getCookies().then(function(cookies){
@@ -404,12 +408,8 @@ WcBot.prototype._LoginOrNot = function(callback){
             if(txt != '' && self.loggedIn){
                 return callback(null, null);
             }
-            //needLogin(self, callback);
         })
         .thenCatch(function(e){
-            //if(e.code == 7){
-            //    return needLogin(self, callback);
-            //}
             callback(e, null);
         });
 };
@@ -423,7 +423,6 @@ function getLoginQr(wcBot, callback){
             return self.driver.findElement({css: '.qrcode img'});
         })
         .then(function(img){
-            console.log("img enter-------");
             img.getAttribute('src')
                 .then(function(src){
                     console.log(src)
@@ -521,15 +520,17 @@ function _readProfileChain(self, callback){
     self.driver.findElement({'css': 'div#mmpop_profile>div.profile_mini'})
         .then(function(popItem){
             pop = popItem;
-            return pop.findElement({'css': 'div.profile_mini_hd img'})
-                .then(function(headImg){
-                    return headImg.getAttribute('src')
+            return pop.findElement({'css': 'div.profile_mini_bd>div.meta_area>div.meta_item:nth-child(2) p'})
+                .then(function(placeItem){
+                    return placeItem.getText()
                 })
-                .then(function(src){
-                    return data.headIconUrl = src;
+                .then(function(placetxt){
+                    data.place = placetxt;
+                    data.botid = self.id;
+                    return;
                 })
         })
-        .then(function(src){
+        .then(function(){
             return pop.findElement({'css': 'div.profile_mini_bd>div.nickname_area h4'})
                 .then(function(h4){
                     h4.getText()
@@ -548,20 +549,28 @@ function _readProfileChain(self, callback){
                 })
         })
         .then(function(){
-            return pop.findElement({'css': 'div.profile_mini_bd>div.meta_area>div.meta_item:nth-child(2) p'})
-                .then(function(placeItem){
-                    return placeItem.getText()
+            return pop.findElement({'css': 'div.profile_mini_hd img'})
+                .then(function(headImg){
+                    return headImg.getAttribute('src')
                 })
-                .then(function(placetxt){
-                    data.place = placetxt;
-                    data.botid = self.id;
-                    receiveReset(self, function(){
-                        return callback(null, data);
+                .then(function(src){
+                    var formData = {file: {value: request({url: src, jar: j, encoding: null}), options: {filename: 'xxx.jpg'}}};
+                    request.post({url:fsServer, formData: formData}, function(err, res, body) {
+                        if (err) {
+                            return callback(err, null);
+                        }
+                        var json = JSON.parse(body);
+                        data.headimgid = json['media_id'] || "";
+                        receiveReset(self, function(){
+                            return callback(json.err, data);
+                        });
                     });
                 })
         })
         .thenCatch(function(err){
-            return callback(err)
+            receiveReset(self, function(){
+                return callback(err);
+            });
         })
 }
 
@@ -687,46 +696,69 @@ function _modifyRemarkAsync(self, codeTmp){
 }
 
 function _findOnePro(self, id, callback){
-    self.driver.findElement(searchLocator).sendKeys(id);
-    self.driver.sleep(1000);
-    self.driver.findElements({
-        'css': 'div.contact_item.on'
-    }).
-        then (function (collection) {
-        var len = collection.length;
-        var i=0;
-        collection.map(function (item) {
-            var contactItem = item;
-            item.findElement({'css': 'h4.nickname'})
-                .then(function(infoItem){
-                    infoItem.getText().
-                        then(function (value) {
-                            i++;
-                            if (value === id) {
-                                contactItem.click().then(function(){
+    console.log('find on--------')
+    self.driver.findElement(searchLocator)
+        .then(function(searchItem){
+            console.log('search item------')
+            return searchItem.sendKeys(id);
+        })
+        .then(function(){
+            console.log('send ok');
+            return self.driver.sleep(1000);
+        })
+        .then(function(){
+            return self.driver.findElements({
+                'css': 'div.contact_item.on'
+            })
+        })
+        .then(function (collection) {
+            var len = collection.length;
+            var i=0;
+            collection.map(function (item) {
+                var contactItem = item;
+                item.findElement({'css': 'h4.nickname'})
+                    .then(function(infoItem){
+                        return infoItem.getText()
+                    .then(function (value) {
+                        i++;
+                        if (value === id) {
+                            contactItem.click()
+                                .then(function(){
                                     callback(null, null);
+                                })
+                                .thenCatch(function(e){
+                                    console.log(e);
+                                    callback(e, null);
                                 });
-                                return;
-                            }
-                            else if(i === len){
-                                //send to is not exist
-                                receiveReset(self, function(){
-                                    self.driver.findElement(searchLocator)
-                                        .then(function(searchInput){
-                                            return searchInput.clear();
-                                        })
-                                        .then(function(){
-                                            callback(new Error('user does not exist'));
-                                        })
-                                        .thenCatch(function(e){
-                                            callback(new Error('Failed to clear search input'));
-                                        })
-                                });
-                            }
-                        });
+                        }
+                        else if(i === len){
+                            //send to is not exist
+                            receiveReset(self, function(){
+                                self.driver.findElement(searchLocator)
+                                    .then(function(searchInput){
+                                        return searchInput.clear();
+                                    })
+                                    .then(function(){
+                                        callback(new Error('user does not exist'));
+                                    })
+                                    .thenCatch(function(e){
+                                        callback(new Error('Failed to clear search input'));
+                                    })
+                            });
+                        }
+                        else{
+                            //unknow error
+                            console.log('process stop error: unknow error');
+                        }
+                    })
+                    .thenCatch(function(e){
+                        console.log('error occur-----------');
+                        console.log(e);
+                        callback(e, null)
+                    })
                 });
+            });
         });
-    });
 }
 
 function pollingDispatcher(input){
@@ -768,7 +800,7 @@ function pollingDispatcher(input){
                     return _modifyRemarkAsync(self)
                 })
                 .then(function(profile){
-                    self.emit('contactAdded', {err: null, data: {botid: self.id, bid: profile.code, nickName: profile.nickName}});
+                    self.emit('contactAdded', {err: null, data: {botid: self.id, bid: profile.code, nickname: profile.nickName}});
 
                 })
             }
@@ -802,6 +834,9 @@ function pollingDispatcher(input){
             self.sendTo = input;
             item.getText()
                 .then(function(count){
+                    console.log("__________");
+                    console.log(parentItem);
+                    console.log('click' in parentItem)
                     parentItem.click()
                     .then(function(){
                         return self.driver.sleep(200);
@@ -843,18 +878,25 @@ function spiderContent(self, unReadCount, callback){
         .then(function(msgArr){
             return callback(null, msgArr);
         })
-        .thenCatch(function(err){
-            console.log("err--------------"+err);
-            return callback(err);
+        .thenCatch(function(e){
+            console.log("err--------------");
+            console.log(e);
+            return callback(e);
         });
+    var _getContentAsync = PromiseBB.promisify(_getContent);
     function _getContent(self, promise, callback){
         var currNode = null;
-        var msg = {
-            MsgId: codeService.fetch(),
-            FromUserName: self.sendTo,
-            ToUserName: self.id,
-            CreateTime: Math.ceil(parseInt(new Date().getTime(), 10)/1000).toString()
-        };
+        try{
+            var msg = {
+                MsgId: codeService.fetch(),
+                FromUserName: self.sendTo,
+                ToUserName: self.id,
+                CreateTime: Math.ceil(parseInt(new Date().getTime(), 10)/1000).toString()
+            };
+        }catch(e){
+            console.log(e)
+        }
+        console.log(promise.findElement({'css': '.bubble_cont >div'}));
         promise.findElement({'css': '.bubble_cont >div'})
             .then(function(item){
                 currNode = item;
@@ -862,15 +904,20 @@ function spiderContent(self, unReadCount, callback){
             })
             .then(function(className){
                 if(className === 'plain'){
-                    return currNode.findElement({'css': 'pre.js_message_plain'})
+                    console.log('plain-------------');
+                    currNode.findElement({'css': 'pre.js_message_plain'})
                     .then(function(preEl){
-                        return preEl.getText().then(function(payLoad){
-                            if(!payLoad){
+                        console.log("preEl---------------")
+                        console.log(preEl)
+                        preEl.getText().then(function(payLoad){
+                            console.log('payLoad');
+                            console.log(payLoad);
+                            if(payLoad){
                                 msg['Content'] = payLoad;
                                 msg['MsgType'] = 'text';
                                 return callback(null, msg);
                             } else {
-                                return preEl.findElement({'css': 'img'})
+                                preEl.findElement({'css': 'img'})
                                     .then(function(img){
                                         return img.getAttribute('text');
                                     })
@@ -885,6 +932,8 @@ function spiderContent(self, unReadCount, callback){
                         })
                     })
                     .thenCatch(function(e){
+                        console.log('receive message failed-----');
+                        console.log(e);
                         return callback(e, null)
                     })
                 }
@@ -928,6 +977,11 @@ function spiderContent(self, unReadCount, callback){
                         callback(e, null)
                     })
                 }
+            })
+            .thenCatch(function(e){
+                console.log('spider content error-------');
+                console.log(e.stack)
+                return callback(e, null);
             });
             function getMediaUrl(src){
                 var url = src.split('&type=slave')[0];
@@ -967,7 +1021,7 @@ function spiderContent(self, unReadCount, callback){
                     });
                 });
             }
-        function validateMedia(type){
+            function validateMedia(type){
             try{
                 return findSuffix(type);
             }catch(e){
@@ -975,7 +1029,6 @@ function spiderContent(self, unReadCount, callback){
             }
         }
     }
-    var _getContentAsync = PromiseBB.promisify(_getContent);
 }
 
 function receiveReset(self, callback){

@@ -1,8 +1,8 @@
 var Promise = require('bluebird');
 var Service = {};
-var uuidGen = require('node-uuid');
+var idGen = require('../app/id');
 Service.fetch = function(){
-    return uuidGen.v1();
+    return 'bu-' + idGen.next('WechatBotUser').toId();
 };
 Service = Promise.promisifyAll(Service);
 module.exports = Service;

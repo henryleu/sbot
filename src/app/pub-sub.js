@@ -114,4 +114,5 @@ function readProfileHandler(channel, msg){
         pubSubService.pubClient.publish('sbot:profile', JSON.stringify({err: err, data: data}));
     });
 }
+
 module.exports = pubSubService;
