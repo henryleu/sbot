@@ -37,6 +37,7 @@ util.inherits(WcBot, EventEmitter);
  * Launch the chrome client and get ready to polling
  */
 WcBot.prototype.start = function(){
+    console.log('begin start')
     var self = this;
     self._login(function(err, data){
         console.log('login ok');
@@ -56,22 +57,20 @@ WcBot.prototype.stop = function(){
     var self = this;
     return self.driver.close()
         .then(function(){
-            return new Promise(function(resolve, reject){
-                setTimeout(function(){
-                    resolve();
-                }, 2000)
-            })
-        })
-        .then(function(){
             self.sendTo = null;
             self.driver = createDriver();
             self.taskQueue = new TaskQueue(1);
             self.loggedIn = false;
+            clearInterval(self.callCsToLogin);
+            clearInterval(self.waitForLogin);
             self.callCsToLogin = null;
             self.waitForLogin = null;
-        })
-        .then(function(){
+            console.log("~~~~~~~~~");
             return self.driver.sleep(3000);
+        })
+        .thenCatch(function(e){
+            console.log('failed to stop bot');
+            console.log(e)
         })
 };
 
@@ -233,19 +232,31 @@ WcBot.prototype._listenCurrUser = function(){
  */
 WcBot.prototype._login = function(callback){
     var self = this;
+    console.log("begin login")
     self.driver.get('https://wx.qq.com/?lang=zh_CN')
+    //self.driver.get('http://www.baidu.com')
         .then(function(){
             needLogin(self, function(err, media_id){
                 if(err){
-                    return console.warn(err);
+                    console.error(err);
+                    return self.stop()
+                        .then(function(){
+                            console.log("stop ok");
+                            return self.start();
+                        });
                 }
                 return;
             });
             self.callCsToLogin = setInterval(function(){
                 needLogin(self, function(err, media_id){
                     if(err){
-                        return console.warn(err);
+                        console.warn(err);
+                        self.stop()
+                            .then(function(){
+                                return self.start();
+                            });
                     }
+                    return;
                 });
             }, 15*60*1000);
             self.waitForLogin = setInterval(function(){
@@ -262,11 +273,6 @@ WcBot.prototype._login = function(callback){
                         }
                     })
                     .thenCatch(function(e){
-                        //TODO
-                        self.stop()
-                            .then(function(){
-                                return self.start();
-                            });
                         console.error(e);
                     })
             }, 2000);
@@ -465,9 +471,7 @@ function needLogin(wcBot, callback){
             self.emit('needLogin', {err: null, data:{media_id: media_id, botid: self.id}});
             return callback(null, null);
         }
-        self.stop().then(function(){
-            callback(err, null);
-        });
+        callback(err, null);
     })
 }
 
