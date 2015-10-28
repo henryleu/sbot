@@ -19,6 +19,7 @@ var chatCache = {};
 var currInteral = {};
 var reconnectTime = settings.reconnectTime;
 var createDriver = require('../webdriver/webdriverFactory');
+var MYERROR = require('./myerror');
 
 function WcBot(id){
     EventEmitter.call(this);
@@ -53,7 +54,7 @@ WcBot.prototype.start = function(){
  */
 WcBot.prototype.stop = function(){
     var self = this;
-    return self.driver.quit()
+    return self.driver.close()
         .then(function(){
             return new Promise(function(resolve, reject){
                 setTimeout(function(){
@@ -70,11 +71,7 @@ WcBot.prototype.stop = function(){
             self.waitForLogin = null;
         })
         .then(function(){
-            return new Promise(function(resolve, reject){
-                setTimeout(function(){
-                    resolve();
-                }, 3000)
-            })
+            return self.driver.sleep(3000);
         })
 };
 
@@ -207,7 +204,7 @@ WcBot.prototype._polling = function(){
                         //client is disconnected, close the driver and start again
                         self.loggedIn = false;
                         self.stop().then(function(){
-                            self.start();
+                            return self.start();
                         });
                     } else {
                         //connection is ok, check whether msgs are arrived
@@ -258,7 +255,6 @@ WcBot.prototype._login = function(callback){
                     })
                     .then(function(txt){
                         if(!self.loggedIn && txt != ""){
-                            console.log(self.id);
                             clearInterval(self.waitForLogin);
                             clearInterval(self.callCsToLogin);
                             self.loggedIn = true;
@@ -269,7 +265,7 @@ WcBot.prototype._login = function(callback){
                         //TODO
                         self.stop()
                             .then(function(){
-                                self.start();
+                                return self.start();
                             });
                         console.error(e);
                     })
@@ -312,19 +308,22 @@ WcBot.prototype._walkChatList = function(callback){
     self.driver.findElements({'css': 'div[ng-repeat*="chatContact"]'})
         .then(function(collection){
             function iterator(index){
-                var item = currItem = collection[index];
+                var item = collection[index];
+                var iblockTemp = null;
                 item.findElement({'css': 'i.web_wechat_reddot_middle.icon'})
                     .then(function(iblock){
-                        var iblockTemp = iblock;
-                        item.findElement({'css': 'span.nickname_text'})
-                            .then(function(h3El){
-                                h3El.getText()
-                                    .then(function(txt){
-                                        return pollingDispatcher(txt)(self, iblockTemp, currItem, callback);
-                                    })
-                            })
+                        iblockTemp = iblock;
+                        return item.findElement({'css': 'span.nickname_text'})
                     })
-                    .thenCatch(function(){
+                    .then(function(h3El){
+                        return h3El.getText()
+                    })
+                    .then(function(txt){
+                        console.log("******************")
+                        console.log(txt);
+                        return pollingDispatcher(txt)(self, iblockTemp, item, callback);
+                    })
+                    .thenCatch(function(e){
                         return iterator(index+1)
                     })
             }
@@ -696,10 +695,10 @@ function _modifyRemarkAsync(self, codeTmp){
 }
 
 function _findOnePro(self, id, callback){
-    console.log('find on--------')
+    var searchInput = null;
     self.driver.findElement(searchLocator)
         .then(function(searchItem){
-            console.log('search item------')
+            searchInput = searchItem;
             return searchItem.sendKeys(id);
         })
         .then(function(){
@@ -712,6 +711,10 @@ function _findOnePro(self, id, callback){
             })
         })
         .then(function (collection) {
+            if(collection.length <= 0){
+                //no search contact to send
+                return webdriver.promise.rejected(new webdriver.error.Error(801, 'no_result'))
+            }
             var len = collection.length;
             var i=0;
             collection.map(function (item) {
@@ -758,7 +761,15 @@ function _findOnePro(self, id, callback){
                     })
                 });
             });
-        });
+        })
+        .thenCatch(function(e){
+            if(e.code === MYERROR.NO_RESULT){
+                searchInput.clear()
+                    .then(function(){
+                        receiveReset(self, callback);
+                    })
+            }
+        })
 }
 
 function pollingDispatcher(input){
@@ -831,12 +842,11 @@ function pollingDispatcher(input){
             }
         },
         'defaultHandler': function(self, item, parentItem, callback){
+            console.log("enter receive default handler---------");
             self.sendTo = input;
             item.getText()
                 .then(function(count){
-                    console.log("__________");
-                    console.log(parentItem);
-                    console.log('click' in parentItem)
+                    console.log("unread count -------" + count);
                     parentItem.click()
                     .then(function(){
                         return self.driver.sleep(200);
@@ -848,7 +858,10 @@ function pollingDispatcher(input){
                             }
                             return receiveReset(self, callback);
                         })
-                    });
+                    })
+                    .thenCatch(function(e){
+                        console.error(e);
+                    })
                 })
                 .thenCatch(function(err){
                     console.log("Failed to receive msg [code]-----")
@@ -888,15 +901,14 @@ function spiderContent(self, unReadCount, callback){
         var currNode = null;
         try{
             var msg = {
-                MsgId: codeService.fetch(),
+                MsgId: Math.ceil(parseInt(new Date().getTime(), 10)/1000).toString(),
                 FromUserName: self.sendTo,
                 ToUserName: self.id,
-                CreateTime: Math.ceil(parseInt(new Date().getTime(), 10)/1000).toString()
+                CreateTime: parseInt(new Date().getTime(), 10).toString()
             };
         }catch(e){
             console.log(e)
         }
-        console.log(promise.findElement({'css': '.bubble_cont >div'}));
         promise.findElement({'css': '.bubble_cont >div'})
             .then(function(item){
                 currNode = item;
@@ -908,7 +920,6 @@ function spiderContent(self, unReadCount, callback){
                     currNode.findElement({'css': 'pre.js_message_plain'})
                     .then(function(preEl){
                         console.log("preEl---------------")
-                        console.log(preEl)
                         preEl.getText().then(function(payLoad){
                             console.log('payLoad');
                             console.log(payLoad);
@@ -952,7 +963,8 @@ function spiderContent(self, unReadCount, callback){
                             if(err){
                                 return callback(err, null)
                             }
-                            msg['MediaId'] = res;
+                            msg['MediaId'] = res['wx_media_id'];
+                            msg['FsMediaId'] = res['media_id'];
                             msg['MsgType'] = 'image';
                             callback(null, msg);
                         })
@@ -968,7 +980,8 @@ function spiderContent(self, unReadCount, callback){
                             if(err){
                                 return callback(err, null)
                             }
-                            msg['MediaId'] = res;
+                            msg['MediaId'] = res['wx_media_id'];
+                            msg['FsMediaId'] = res['media_id'];
                             msg['MsgType'] = 'voice';
                             callback(null, msg);
                         });
@@ -1017,7 +1030,7 @@ function spiderContent(self, unReadCount, callback){
                         if(json.err){
                             return call(json.err, null);
                         }
-                        callback(null, json['media_id']);
+                        callback(null, json);
                     });
                 });
             }
