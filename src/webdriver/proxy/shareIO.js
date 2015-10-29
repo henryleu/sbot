@@ -6,11 +6,11 @@ var Queue = require('l-mq');
  */
 module.exports = function buildProxy(webdriver, source, options){
     var shareIO = options.shareIO;
+    if(options && options.shareIO){
+        var queue = new Queue(1);
+    }
     for(var subClazz in source){
         source[subClazz].forEach(function loopSource(method){
-            if(options && options.shareIO){
-                var queue = new Queue(1);
-            }
             var proto = webdriver[subClazz]['prototype'];
             var methodOrigin = proto[method];
             proto[method] = function(){
