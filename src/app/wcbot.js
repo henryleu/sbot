@@ -1,4 +1,4 @@
-var TaskQueue = require('./TasksQueue');
+var TaskQueue = require('l-mq');
 var codeService = require('../services/codeService');
 var PromiseBB = require('bluebird');
 var settings = require('../app/settings');
@@ -20,7 +20,7 @@ var currInteral = {};
 var reconnectTime = settings.reconnectTime;
 var createDriver = require('../webdriver/webdriverFactory');
 var MYERROR = require('./myerror');
-
+var spiderGroupListInfo = require('../funcs/group-list');
 function WcBot(id){
     EventEmitter.call(this);
     this.id = id;
@@ -65,7 +65,6 @@ WcBot.prototype.stop = function(){
             clearInterval(self.waitForLogin);
             self.callCsToLogin = null;
             self.waitForLogin = null;
-            console.log("~~~~~~~~~");
             return self.driver.sleep(3000);
         })
         .thenCatch(function(e){
@@ -113,6 +112,16 @@ WcBot.prototype.send = function(json, callback) {
 WcBot.prototype.readProfile = function(bid, callback){
     var self = this;
     self.taskQueue.enqueue(_readProfile.bind(self),{args:[bid, self], priority: 1, context:self}, callback);
+};
+
+/**
+ * spider the group,s info(username and groupname)
+ * @param bid (string=)
+ * @param callback
+ */
+WcBot.prototype.groupList = function(bid, callback){
+    var self = this;
+    self.taskQueue.enqueue(spiderGroupListInfo, {args:[self.driver]}, callback);
 };
 
 /**
@@ -232,16 +241,14 @@ WcBot.prototype._listenCurrUser = function(){
  */
 WcBot.prototype._login = function(callback){
     var self = this;
-    console.log("begin login")
-    self.driver.get('https://wx.qq.com/?lang=zh_CN')
-    //self.driver.get('http://www.baidu.com')
+    console.log("begin login");
+    self.driver.get(settings.wxIndexUrl)
         .then(function(){
             needLogin(self, function(err, media_id){
                 if(err){
                     console.error(err);
                     return self.stop()
                         .then(function(){
-                            console.log("stop ok");
                             return self.start();
                         });
                 }
@@ -374,12 +381,7 @@ WcBot.prototype._walkCurrList = function(unReadCount, callback){
                 unreadArr.map(function(item){
                     item.findElement({'css': 'pre.js_message_plain'}).then(function(preEl){
                         preEl.getText().then(function(payLoad){
-                            //self.emit('receive', {
-                            //    from: self.sendTo,
-                            //    payLoad: payLoad
-                            //});
                             replayMsg(self, null, callback);
-                            //return callback();
                         })
                     })
                 })
@@ -600,7 +602,6 @@ function _addContact(id, encodeId, callback){
 function _findOneInListAsync(self, id){
     return self.driver.findElements({'css': 'div[ng-repeat*="chatContact"]'})
         .then(function(collection) {
-            console.log(collection.length);
             collection.map(function(item){
                 item.findElement({'css': 'div.chat_item >div.info >h3 >span'})
                     .then(function(span){
@@ -846,11 +847,9 @@ function pollingDispatcher(input){
             }
         },
         'defaultHandler': function(self, item, parentItem, callback){
-            console.log("enter receive default handler---------");
             self.sendTo = input;
             item.getText()
                 .then(function(count){
-                    console.log("unread count -------" + count);
                     parentItem.click()
                     .then(function(){
                         return self.driver.sleep(200);

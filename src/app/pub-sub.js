@@ -1,33 +1,17 @@
 var subClient = require('../app/redis-client')('sub');
 var pubClient = require('../app/redis-client')('pub');
 var Service = require('./service');
+var botManagar = require('./BotManagar');
 var pubSubService = {
     pubClient: pubClient,
     subClient: subClient
 };
-var Bots = (function(){
-    var botsContainer = {};
-    function Bots(){}
-    Bots.prototype.getBotById = function(id){
-        return botsContainer[id];
-    };
-    Bots.prototype.setBot = function(bot){
-        botsContainer[bot.id] = bot;
-    };
-    Bots.prototype.removeBot = function(id){
-        delete botsContainer[id];
-    };
-    Bots.prototype.getBots = function(){
-        return botsContainer;
-    };
-    return Bots;
-}());
-var bots = new Bots();
 var channelMap = {
     'sbot:start': startHandler,
     'sbot:stop': stopHandler,
     'sbot:message-send': sendHandler,
-    'sbot:profile-request': readProfileHandler
+    'sbot:profile-request': readProfileHandler,
+    'sbot:group-list-request': groupListHandler
 };
 
 //subscribe channel start, send and channel readProfile
@@ -35,6 +19,7 @@ pubSubService.subClient.subscribe('sbot:start');
 pubSubService.subClient.subscribe('sbot:stop');
 pubSubService.subClient.subscribe('sbot:message-send');
 pubSubService.subClient.subscribe('sbot:profile-request');
+pubSubService.subClient.subscribe('sbot:group-list-request');
 
 //listen message event from athena
 pubSubService.subClient.on('message', function(channel, message){
@@ -54,7 +39,7 @@ pubSubService.subClient.on('message', function(channel, message){
 //event handler
 function startHandler(channel, msg){
     //msg = {id:'id'}
-    if(bots.getBotById(msg.botid)){
+    if(botManagar.getBotById(msg.botid)){
         console.warn('the bot is started already.');
         return;
     }
@@ -74,25 +59,25 @@ function startHandler(channel, msg){
         if(err) return console.log(err);
         pubSubService.pubClient.publish('sbot:contact-added', JSON.stringify({err: err, data: data}));
     });
-    bots.setBot(service);
+    botManagar.setBot(service);
     service.start();
 }
 
 function stopHandler(channel, msg){
-    var service = bots.getBotById(msg.botid);
+    var service = botManagar.getBotById(msg.botid);
     if(!service){
         console.warn('has no such bot[botid] = ' + msg.botid);
         return;
     }
     service.stop().then(function(){
-        bots.removeBot(msg.botid);
+        botManagar.removeBot(msg.botid);
     });
 }
 
 function sendHandler(channel, msg){
-    var service = bots.getBotById(msg.botid);
+    var service = botManagar.getBotById(msg.FromUserName);
     if(!service){
-        console.warn('has no such bot[botid] = ' + msg.botid);
+        console.warn('has no such bot[botid] = ' + msg.FromUserName);
         return;
     }
     //msg = { ToUserName:xxx, MsgType:'text/voice/image', Content:String, Url:MediaUrl}
@@ -102,7 +87,7 @@ function sendHandler(channel, msg){
 }
 
 function readProfileHandler(channel, msg){
-    var service = bots.getBotById(msg.botid);
+    var service = botManagar.getBotById(msg.botid);
     if(!service){
         console.warn('has no such bot[botid] = ' + msg.botid);
         return;
@@ -112,6 +97,19 @@ function readProfileHandler(channel, msg){
         console.log(data);
         if(err) console.log('error occur------' + JSON.stringify(err));
         pubSubService.pubClient.publish('sbot:profile', JSON.stringify({err: err, data: data}));
+    });
+}
+
+function groupListHandler(channel, msg){
+    var service = botManagar.getBotById(msg.botid);
+    if(!service){
+        console.warn('has no such bot[botid] = ' + msg.botid);
+        return;
+    }
+    service.groupList(function(err, data){
+        console.log(data);
+        if(err) console.log('error occur------' + JSON.stringify(err));
+        pubSubService.pubClient.publish('sbot:group-list', JSON.stringify({err: err, data: data}));
     });
 }
 

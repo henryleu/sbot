@@ -1,6 +1,5 @@
 var webdriver = require('selenium-webdriver');
 var genHelper = require('./webdriver-helper');
-var taskQueue = require('./TasksQueue');
 var driver = new webdriver.Builder().
     withCapabilities(webdriver.Capabilities.chrome()).
     build();

@@ -1,8 +1,8 @@
 var redis = {
     mode:'single',
-        host: '127.0.0.1',
+        host: '123.56.89.114',
     port: 6379,
-    auth:'',
+    auth:'trillers',
     sentinel: {
         hosts: [{host: '127.0.0.1', port: 26379}],
         masterName: 'mymaster'

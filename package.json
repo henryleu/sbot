@@ -32,7 +32,8 @@
     "serve-favicon": "^2.2.0",
     "serve-static": "^1.8.0",
     "thunkify": "*",
-    "webdriverio": "^3.0.4"
+    "webdriverio": "^3.0.4",
+    "l-mq": "*"
   },
   "devDependencies": {
     "mocha": "^2.1.0"
