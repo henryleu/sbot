@@ -1,4 +1,5 @@
 var Queue = require('l-mq');
+var queue = new Queue(1);
 /**
  * allow operation that is IO to serial execute
  * @param options {shareIO: boolean}
@@ -6,9 +7,6 @@ var Queue = require('l-mq');
  */
 module.exports = function buildProxy(webdriver, source, options){
     var shareIO = options.shareIO;
-    if(options && options.shareIO){
-        var queue = new Queue(1);
-    }
     for(var subClazz in source){
         source[subClazz].forEach(function loopSource(method){
             var proto = webdriver[subClazz]['prototype'];
@@ -34,4 +32,4 @@ module.exports = function buildProxy(webdriver, source, options){
             }
         })
     }
-}
+};
