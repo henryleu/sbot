@@ -8,7 +8,7 @@ require('./proxy/shareIO')(webdriver, source, {shareIO: true});
 
 module.exports = function createDriver(){
     var driver = new webdriver.Builder()
-        .withCapabilities(webdriver.Capabilities.firefox())
+        .withCapabilities(webdriver.Capabilities.chrome())
         .setControlFlow(new webdriver.promise.ControlFlow())
         .build();
     return driver;
