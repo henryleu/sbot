@@ -3,7 +3,6 @@ var urlCore = require('url');
 var qs = require('querystring');
 var reset = require('./reset-pointer');
 var closeLocator = webdriver.By.css('div.ngdialog-close');
-var dialogLocator = webdriver.By.css('div.ngdialog-overlay');
 /**
  * group list info spider
  * @param driver

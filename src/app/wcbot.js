@@ -1006,12 +1006,11 @@ function spiderContent(self, unReadCount, callback){
                 console.log("getFileUrl-------------" + url);
                 request({url: url, jar: j, encoding: null}, function(err, res, body){
                     var resSplit = res.req.path.split('/');
-                    var fileType = validateMedia();
+                    var fileType = validateMedia(res.headers['content-type']);
                     if(!fileType){
                         setTimeout(getMediaFile(url, callback), 1000);
                         return;
                     }
-                    console.log("body-------------" + JSON.stringify(body));
                     console.log("filename-------------" + resSplit[resSplit.length-1]);
                     console.log("contentType-------------" + res.headers['content-type']);
                     var formData = {
@@ -1024,7 +1023,6 @@ function spiderContent(self, unReadCount, callback){
                         }
                     };
                     request.post({url:fsServer, formData: formData}, function(err, res, body) {
-                        console.log("remote file-----------------" + JSON.stringify(json));
                         if (err) {
                             return callback(err, null);
                         }
