@@ -70,6 +70,10 @@ function stopHandler(channel, msg){
         console.warn('has no such bot[botid] = ' + msg.botid);
         return;
     }
+    if(!service.loggedIn){
+        console.warn('the bot[botid] = ' + msg.botid + ' haven,t login');
+        return;
+    }
     service.stop().then(function(){
         botManagar.removeBot(msg.botid);
     });
@@ -80,6 +84,10 @@ function sendHandler(channel, msg){
     var service = botManagar.getBotById(msg.FromUserName);
     if(!service){
         console.warn('has no such bot[botid] = ' + msg.FromUserName);
+        return;
+    }
+    if(!service.loggedIn){
+        console.warn('the bot[botid] = ' + msg.botid + ' haven,t login');
         return;
     }
     //msg = { ToUserName:xxx, MsgType:'text/voice/image', Content:String, Url:MediaUrl}
@@ -95,6 +103,10 @@ function readProfileHandler(channel, msg){
         console.warn('has no such bot[botid] = ' + msg.botid);
         return;
     }
+    if(!service.loggedIn){
+        console.warn('the bot[botid] = ' + msg.botid + ' haven,t login');
+        return;
+    }
     //msg = {bid: String}
     service.readProfile(msg.bid, function(err, data){
         console.log(data);
@@ -108,6 +120,10 @@ function groupListHandler(channel, msg){
     var service = botManagar.getBotById(msg.botid);
     if(!service){
         console.warn('has no such bot[botid] = ' + msg.botid);
+        return;
+    }
+    if(!service.loggedIn){
+        console.warn('the bot[botid] = ' + msg.botid + ' haven,t login');
         return;
     }
     service.groupList(msg.botid, function(err, data){

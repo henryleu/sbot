@@ -467,8 +467,9 @@ function getLoginQr(wcBot, callback){
 function needLogin(wcBot, callback){
     var self = wcBot;
     getLoginQr(self, function(err, media_id){
+        console.log("-------------");
+        console.log("get login qrcode successful the media_id is [ " + media_id + " ]");
         if(!err){
-            console.log(media_id);
             self.emit('needLogin', {err: null, data:{media_id: media_id, botid: self.id}});
             return callback(null, null);
         }
