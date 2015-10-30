@@ -23,7 +23,7 @@ pubSubService.subClient.subscribe('sbot:group-list-request');
 
 //listen message event from athena
 pubSubService.subClient.on('message', function(channel, message){
-    console.log(message);
+    console.log("redis recieve a message, channel is " + channel + " , message is " + message)
     try{
         var msg = JSON.parse(message);
         if(channelMap[channel]){
@@ -61,7 +61,7 @@ function startHandler(channel, msg){
         pubSubService.pubClient.publish('sbot:contact-added', JSON.stringify({err: err, data: data}));
     });
     service.onLogin(function(err, data){
-        console.log(data);
+        console.log("login-data is " + require('util').inspect(data));
         if(err) return console.log(err);
         pubSubService.pubClient.publish('sbot:login', JSON.stringify({err: err, data: data}));
     });

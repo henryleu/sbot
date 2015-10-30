@@ -130,7 +130,10 @@ WcBot.prototype.groupList = function(bid, callback){
  * @param handler
  */
 WcBot.prototype.onLogin = function(handler){
-    this.removeAllListeners('login').on('login', handler);
+    var self = this;
+    this.removeAllListeners('login').on('login', function(data){
+        handler.call(self, data.err, data.data)
+    });
 }
 
 /**
@@ -138,7 +141,10 @@ WcBot.prototype.onLogin = function(handler){
  * @param handler
  */
 WcBot.prototype.onAbort = function(handler){
-    this.removeAllListeners('abort').on('abort', handler);
+    var self = this;
+    this.removeAllListeners('abort').on('abort', function(data){
+        handler.call(self, data.err, data.data)
+    });
 }
 
 /**
