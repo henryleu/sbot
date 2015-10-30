@@ -18,7 +18,7 @@ module.exports = function(driver, callback){
         });
     driver.call(function(){
         var receiveCount = 0;
-        return spiderGroupList().then(function (arr) {
+        return spiderGroupList(driver, groupNameArr).then(function (arr) {
             receiveCount = arr.length;
             groupNameArr = groupNameArr.concat(arr);
             return iterator(new webdriver.promise.fulfilled());
@@ -38,7 +38,7 @@ module.exports = function(driver, callback){
                         if(data.done){
                             return groupNameArr;
                         }
-                        return spiderGroupList().then(function (arr) {
+                        return spiderGroupList(driver,groupNameArr).then(function (arr) {
                             receiveCount += receiveCount;
                             var newArr = arr.filter(function(item){
                                 return item.name != null;
@@ -63,7 +63,7 @@ module.exports = function(driver, callback){
     });
 }
 
-function spiderGroupList(){
+function spiderGroupList(driver, groupNameArr){
     driver.sleep(1000);
     return driver.findElements({'css': '#createChatRoomContainer div[ng-repeat="item in allContacts"]'})
         .then(function(collection) {
