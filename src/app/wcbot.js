@@ -65,6 +65,7 @@ WcBot.prototype.stop = function(){
             clearInterval(self.waitForLogin);
             self.callCsToLogin = null;
             self.waitForLogin = null;
+            self.emit('crash', {err: null, data: {botid: self.id}});
             return self.driver.sleep(3000);
         })
         .thenCatch(function(e){
@@ -123,6 +124,22 @@ WcBot.prototype.groupList = function(bid, callback){
     var self = this;
     self.taskQueue.enqueue(spiderGroupListInfo, {args:[self]}, callback);
 };
+
+/**
+ * Attach a login listener on WcBot
+ * @param handler
+ */
+WcBot.prototype.onLogin = function(handler){
+    this.removeAllListeners('login').on('login', handler);
+}
+
+/**
+ * Attach a crash listener on WcBot
+ * @param handler
+ */
+WcBot.prototype.onCrash = function(handler){
+    this.removeAllListeners('crash').on('crash', handler);
+}
 
 /**
  * Attach a listener to WcBot, onReceive is invoke when a msg being received.
@@ -209,7 +226,6 @@ WcBot.prototype._polling = function(){
                 return self.taskQueue.enqueue(self._LoginOrNot.bind(self), null, function(err, data){
                     if(err){
                         //client is disconnected, close the driver and start again
-                        self.loggedIn = false;
                         self.stop().then(function(){
                             return self.start();
                         });
@@ -275,6 +291,7 @@ WcBot.prototype._login = function(callback){
                             clearInterval(self.waitForLogin);
                             clearInterval(self.callCsToLogin);
                             self.loggedIn = true;
+                            self.emit('login', {err: null, data: {botid: self.id}});
                             callback(null, null);
                         }
                     })

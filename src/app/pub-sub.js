@@ -60,6 +60,16 @@ function startHandler(channel, msg){
         if(err) return console.log(err);
         pubSubService.pubClient.publish('sbot:contact-added', JSON.stringify({err: err, data: data}));
     });
+    service.onLogin(function(err, data){
+        console.log(data);
+        if(err) return console.log(err);
+        pubSubService.pubClient.publish('sbot:login', JSON.stringify({err: err, data: data}));
+    });
+    service.onCrash(function(err, data){
+        console.log(data);
+        if(err) return console.log(err);
+        pubSubService.pubClient.publish('sbot:crash', JSON.stringify({err: err, data: data}));
+    });
     botManagar.setBot(service);
     service.start();
 }
