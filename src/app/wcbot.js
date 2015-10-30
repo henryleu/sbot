@@ -121,7 +121,7 @@ WcBot.prototype.readProfile = function(bid, callback){
  */
 WcBot.prototype.groupList = function(bid, callback){
     var self = this;
-    self.taskQueue.enqueue(spiderGroupListInfo, {args:[self.driver]}, callback);
+    self.taskQueue.enqueue(spiderGroupListInfo, {args:[self]}, callback);
 };
 
 /**
