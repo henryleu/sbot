@@ -106,7 +106,7 @@ function groupListHandler(channel, msg){
         console.warn('has no such bot[botid] = ' + msg.botid);
         return;
     }
-    service.groupList(function(err, data){
+    service.groupList(msg.botid, function(err, data){
         console.log(data);
         if(err) console.log('error occur------' + JSON.stringify(err));
         pubSubService.pubClient.publish('sbot:group-list', JSON.stringify({err: err, data: data}));

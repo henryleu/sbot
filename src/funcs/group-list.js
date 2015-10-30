@@ -1,4 +1,6 @@
 var webdriver = require('selenium-webdriver');
+var urlCore = require('url');
+var qs = require('querystring');
 /**
  * group list info spider
  * @param driver
@@ -56,11 +58,12 @@ module.exports = function(self, callback){
             })
         }
     }).then(function(arr){
+        console.log("------------------------");
         callback(null, {
             botid: self.id,
             list: groupNameArr
         });
-    }).catch(function(e){
+    }).thenCatch(function(e){
         callback(e);
     });
 }

@@ -257,7 +257,7 @@ WcBot.prototype._login = function(callback){
             self.callCsToLogin = setInterval(function(){
                 needLogin(self, function(err, media_id){
                     if(err){
-                        console.warn(err);
+                        console.error(err);
                         self.stop()
                             .then(function(){
                                 return self.start();
