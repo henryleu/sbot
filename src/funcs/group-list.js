@@ -3,7 +3,8 @@
  * @param driver
  * @param callback
  */
-module.exports = function(driver, callback){
+module.exports = function(self, callback){
+    var driver = self.driver;
     var groupNameArr = [];
     driver.findElement({'css': '.web_wechat_add'}).click();
     driver.wait(webdriver.until.elementLocated(webdriver.By.css('#mmpop_system_menu')) , 20000);
