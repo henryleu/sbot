@@ -65,7 +65,7 @@ WcBot.prototype.stop = function(){
             clearInterval(self.waitForLogin);
             self.callCsToLogin = null;
             self.waitForLogin = null;
-            self.emit('crash', {err: null, data: {botid: self.id}});
+            self.emit('abort', {err: null, data: {botid: self.id}});
             return self.driver.sleep(3000);
         })
         .thenCatch(function(e){
@@ -134,11 +134,11 @@ WcBot.prototype.onLogin = function(handler){
 }
 
 /**
- * Attach a crash listener on WcBot
+ * Attach a abort listener on WcBot
  * @param handler
  */
-WcBot.prototype.onCrash = function(handler){
-    this.removeAllListeners('crash').on('crash', handler);
+WcBot.prototype.onAbort = function(handler){
+    this.removeAllListeners('abort').on('abort', handler);
 }
 
 /**
@@ -467,7 +467,7 @@ function getLoginQr(wcBot, callback){
                         if(json.err){
                             return callback(json.err, null);
                         }
-                        callback(null, json['media_id']);
+                        callback(null, json);
                     });
                 })
                 .thenCatch(function(e){
@@ -483,11 +483,11 @@ function getLoginQr(wcBot, callback){
 
 function needLogin(wcBot, callback){
     var self = wcBot;
-    getLoginQr(self, function(err, media_id){
+    getLoginQr(self, function(err, data){
         console.log("-------------");
-        console.log("get login qrcode successful the media_id is [ " + media_id + " ]");
+        console.log("get login qrcode successful the media_id is [ " + data.media_id + " ]");
         if(!err){
-            self.emit('needLogin', {err: null, data:{media_id: media_id, botid: self.id}});
+            self.emit('needLogin', {err: null, data:{wx_media_id: data.wx_media_id, media_id: data.media_id, botid: self.id}});
             return callback(null, null);
         }
         callback(err, null);

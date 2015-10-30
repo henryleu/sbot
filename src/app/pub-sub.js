@@ -65,10 +65,10 @@ function startHandler(channel, msg){
         if(err) return console.log(err);
         pubSubService.pubClient.publish('sbot:login', JSON.stringify({err: err, data: data}));
     });
-    service.onCrash(function(err, data){
+    service.onAbort(function(err, data){
         console.log(data);
         if(err) return console.log(err);
-        pubSubService.pubClient.publish('sbot:crash', JSON.stringify({err: err, data: data}));
+        pubSubService.pubClient.publish('sbot:abort', JSON.stringify({err: err, data: data}));
     });
     botManagar.setBot(service);
     service.start();
