@@ -1,3 +1,4 @@
+var webdriver = require('selenium-webdriver');
 /**
  * group list info spider
  * @param driver
