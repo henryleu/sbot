@@ -203,7 +203,6 @@ WcBot.prototype._polling = function(){
         if(!self.loggedIn){
             return;
         }
-        console.log("polling---------------");
         setTimeout(function(){
             //pre task, check the client disconnected or not
             if(getCount()%3 === 0){

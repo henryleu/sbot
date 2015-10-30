@@ -11,6 +11,7 @@
   "author": "henryleu@126.com",
   "license": "",
   "dependencies": {
+    "athena-settings": "git+https://henryleu:c148960791ab761064ecfbb07b7fdf582ff008df@github.com/trillers/athena-settings.git",
     "bluebird": "^2.9.34",
     "chromedriver": "^2.16.0",
     "co": "*",

@@ -39,6 +39,7 @@ pubSubService.subClient.on('message', function(channel, message){
 //event handler
 function startHandler(channel, msg){
     //msg = {id:'id'}
+    console.log("the bot[id]=" + msg.botid + " is starting...");
     if(botManagar.getBotById(msg.botid)){
         console.warn('the bot is started already.');
         return;
@@ -101,6 +102,7 @@ function readProfileHandler(channel, msg){
 }
 
 function groupListHandler(channel, msg){
+    console.log("handing the group list request...");
     var service = botManagar.getBotById(msg.botid);
     if(!service){
         console.warn('has no such bot[botid] = ' + msg.botid);
