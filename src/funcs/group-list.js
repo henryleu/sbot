@@ -1,6 +1,9 @@
 var webdriver = require('selenium-webdriver');
 var urlCore = require('url');
 var qs = require('querystring');
+var reset = require('./reset-pointer');
+var closeLocator = webdriver.By.css('div.ngdialog-close');
+var dialogLocator = webdriver.By.css('div.ngdialog-overlay');
 /**
  * group list info spider
  * @param driver
@@ -58,15 +61,23 @@ module.exports = function(self, callback){
             })
         }
     }).then(function(arr){
-        console.log("------------------------");
-        callback(null, {
-            botid: self.id,
-            list: groupNameArr
+        driver.findElement(closeLocator)
+            .then(function(item){
+                return item.click();
+            });
+        driver.sleep(500);
+        driver.call(function(){
+            reset(self, function(){
+                callback(null, {
+                    botid: self.id,
+                    list: groupNameArr
+                });
+            });
         });
     }).thenCatch(function(e){
         callback(e);
     });
-}
+};
 
 function spiderGroupList(driver, groupNameArr){
     driver.sleep(1000);
@@ -117,4 +128,4 @@ function hasUserName(arr, key) {
         }
     }
     return false;
-};
+}

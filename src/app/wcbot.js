@@ -12,7 +12,6 @@ var fs = require('fs');
 var findSuffix = require('./suffix-map').findSuffix;
 var avatarLocator = webdriver.By.css('div.header > div.avatar');
 var searchLocator = webdriver.By.className('frm_search');
-var receiveRestLocator = webdriver.By.css('div.chat_list div.top');
 var searchedContactLocator = webdriver.By.css(' div[data-height-calc=heightCalc]:nth-child(2) > div');
 var fsServer = settings.fsUrl;
 var chatCache = {};
@@ -21,6 +20,7 @@ var reconnectTime = settings.reconnectTime;
 var createDriver = require('../webdriver/webdriverFactory');
 var MYERROR = require('./myerror');
 var spiderGroupListInfo = require('../funcs/group-list');
+var receiveReset = require('../funcs/reset-pointer');
 function WcBot(id){
     EventEmitter.call(this);
     this.id = id;
@@ -1044,23 +1044,6 @@ function spiderContent(self, unReadCount, callback){
             }
         }
     }
-}
-
-function receiveReset(self, callback){
-    return self.driver.findElement(receiveRestLocator)
-        .then(function(item){
-            return item.click()
-                .then(function(){
-                    item.click()
-                        .then(function(){
-                            return callback()
-                        })
-                })
-        })
-        .thenCatch(function(err){
-            console.log("Failed to reset in list [code]-------");
-            console.error(err);
-        })
 }
 
 function replayMsg(self, count){

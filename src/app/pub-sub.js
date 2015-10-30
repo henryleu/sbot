@@ -76,6 +76,7 @@ function stopHandler(channel, msg){
 }
 
 function sendHandler(channel, msg){
+    console.info("handing the send message request...");
     var service = botManagar.getBotById(msg.FromUserName);
     if(!service){
         console.warn('has no such bot[botid] = ' + msg.FromUserName);
@@ -88,6 +89,7 @@ function sendHandler(channel, msg){
 }
 
 function readProfileHandler(channel, msg){
+    console.info("handing the read profile request...");
     var service = botManagar.getBotById(msg.botid);
     if(!service){
         console.warn('has no such bot[botid] = ' + msg.botid);
@@ -102,15 +104,18 @@ function readProfileHandler(channel, msg){
 }
 
 function groupListHandler(channel, msg){
-    console.log("handing the group list request...");
+    console.info("handing the group list request...");
     var service = botManagar.getBotById(msg.botid);
     if(!service){
         console.warn('has no such bot[botid] = ' + msg.botid);
         return;
     }
     service.groupList(msg.botid, function(err, data){
+        if(err) {
+            return console.log('failed to group list error occur------' + JSON.stringify(err));
+        }
+        console.log("succeed to get group list info");
         console.log(data);
-        if(err) console.log('error occur------' + JSON.stringify(err));
         pubSubService.pubClient.publish('sbot:group-list', JSON.stringify({err: err, data: data}));
     });
 }
