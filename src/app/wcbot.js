@@ -99,7 +99,8 @@ WcBot.prototype.send = function(json, callback) {
                     receiveReset(self, cb);
                 })
                 .thenCatch(function (e) {
-                    console.log(e)
+                    console.log(e);
+                    cb();
                 })
         })
     }, null, callback)
@@ -692,7 +693,7 @@ function _modifyRemarkAsync(self, codeTmp){
         .then(function(itemp){
             return self.driver.sleep(200)
                 .then(function(){
-                    itemp.click()
+                    return itemp.click()
                         .then(function(){
                             return self.driver.executeScript('window.document.querySelector("div.meta_area p").innerText = "";')
                         })
@@ -791,7 +792,7 @@ function _findOnePro(self, id, callback){
             });
         })
         .thenCatch(function(e){
-            if(e.code === MYERROR.NO_RESULT){
+            if(e.code == MYERROR.NO_RESULT){
                 searchInput.clear()
                     .then(function(){
                         receiveReset(self, callback);
