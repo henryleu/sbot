@@ -752,10 +752,13 @@ function _findOnePro(self, id, callback){
                     .then(function(infoItem){
                         return infoItem.getText()
                     .then(function (value) {
+                        console.log("group nick name--------" + value);
                         i++;
                         if (value === id) {
+                            console.log("group name equals " + value)
                             contactItem.click()
                                 .then(function(){
+                                    console.log('the button clicked')
                                     callback(null, null);
                                 })
                                 .thenCatch(function(e){
@@ -766,10 +769,7 @@ function _findOnePro(self, id, callback){
                         else if(i === len){
                             //send to is not exist
                             receiveReset(self, function(){
-                                self.driver.findElement(searchLocator)
-                                    .then(function(searchInput){
-                                        return searchInput.clear();
-                                    })
+                                searchInput.clear()
                                     .then(function(){
                                         callback(new Error('user does not exist'));
                                     })
