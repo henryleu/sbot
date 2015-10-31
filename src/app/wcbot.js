@@ -81,10 +81,13 @@ WcBot.prototype.stop = function(){
  */
 WcBot.prototype.send = function(json, callback) {
     var self = this;
-    self.sendTo = json.sendTo;
-    var content = json.content;
     self.taskQueue.enqueue(function(cb) {
-        self._findOne(function () {
+        self.sendTo = json.sendTo;
+        var content = json.content;
+        self._findOne(function (err) {
+            if(err){
+                return cb();
+            }
             self.driver.findElement({'css': '#editArea'})
                 .then(function (item) {
                     return item.sendKeys(content);
@@ -470,7 +473,12 @@ function getLoginQr(wcBot, callback){
                             console.error(err);
                             return callback(err, null);
                         }
-                        var json = JSON.parse(body);
+                        try{
+                            var json = JSON.parse(body);
+
+                        }catch(e){
+                            return callback(json.err, null);
+                        }
                         if(json.err){
                             return callback(json.err, null);
                         }
@@ -706,16 +714,26 @@ function _modifyRemarkAsync(self, codeTmp){
                         .then(function(){
                             return self.driver.executeScript('window.document.querySelector("div.meta_area p").blur();')
                         })
+                        .then(function(){
+                            return self.driver.sleep(500)
+                        })
                 })
         })
         .then(function(){
-            return self.driver.executeScript('window.document.querySelector("#mmpop_profile >div.profile_mini >div.profile_mini_bd a").click();')
+            return self.driver.findElement({css: '#mmpop_profile >div.profile_mini >div.profile_mini_bd a'})
+                .then(function(plusBtn){
+                    return plusBtn.click();
+                })
                 .then(function(){
                     return {
                         code: code,
                         nickName: nickName
                     };
                 })
+                .thenCatch(function(e){
+                    console.log('err occur---------');
+                    console.error(e);
+                });
         })
         .thenCatch(function(err){
             console.log("Failed to modify remark [code]---------")
@@ -795,7 +813,7 @@ function _findOnePro(self, id, callback){
             if(e.code == MYERROR.NO_RESULT){
                 searchInput.clear()
                     .then(function(){
-                        receiveReset(self, callback);
+                        receiveReset(self, callback, e);
                     })
             }
         })
