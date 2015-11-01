@@ -21,6 +21,9 @@ var createDriver = require('../webdriver/webdriverFactory');
 var MYERROR = require('./myerror');
 var spiderGroupListInfo = require('../funcs/group-list');
 var receiveReset = require('../funcs/reset-pointer');
+var qs = require('querystring');
+var url = require('url');
+var _ = require('underscore');
 function WcBot(id){
     EventEmitter.call(this);
     this.id = id;
@@ -30,6 +33,7 @@ function WcBot(id){
     this.loggedIn = false;
     this.callCsToLogin = null;
     this.waitForLogin = null;
+    this.baseUrl = "";
 }
 var util = require('util');
 util.inherits(WcBot, EventEmitter);
@@ -215,13 +219,15 @@ WcBot.prototype.onDisconnect = function(handler){
  */
 WcBot.prototype._polling = function(){
     var self = this;
-    var url = settings.wxIndexUrl;
-    setCookiesAndPolling();
+    self.driver.getCurrentUrl().then(function(url){
+        self.baseUrl = url;
+        setCookiesAndPolling();
+    });
     function setCookiesAndPolling(){
         self.driver.manage().getCookies().then(function(cookies){
             cookies.forEach(function(cookie){
                 var requestCookie = request.cookie(cookie.name + '=' + cookie.value);
-                j.setCookie(requestCookie, url);
+                j.setCookie(requestCookie, self.baseUrl);
             });
             polling();
         });
@@ -538,8 +544,8 @@ function _readProfile(bid, self, callback){
             .then(function(){
                 _readProfileChain(self, function(err, data){
                     if(err){
-                        throw new Error('Failed to read Profile Chain');
-                        return;
+                        console.error('Failed to read Profile Chain');
+                        return callback(err);
                     }
                     return callback(null, data);
                 })
@@ -591,17 +597,34 @@ function _readProfileChain(self, callback){
                     return headImg.getAttribute('src')
                 })
                 .then(function(src){
-                    var formData = {file: {value: request({url: src, jar: j, encoding: null}), options: {filename: 'xxx.jpg'}}};
-                    request.post({url:fsServer, formData: formData}, function(err, res, body) {
-                        if (err) {
-                            return callback(err, null);
+                    var urlJson = _.pick(url.parse(src), 'protocol', 'slashes', 'host', 'hostname', 'pathname');
+                    var qsJson = qs.parse(url.parse(src).query);
+                    delete qsJson["skey"];
+                    delete qsJson["type"];
+                    urlJson.search = qs.stringify(qsJson);
+                    var formatUrl = url.format(urlJson);
+                    request.get({url: formatUrl, jar: j, encoding: null}, function(err, res, body){
+                        console.log("body------" + body);
+                        if(body && body.length){
+                            console.log(body.length)
                         }
-                        var json = JSON.parse(body);
-                        data.headimgid = json['media_id'] || "";
-                        receiveReset(self, function(){
-                            return callback(json.err, data);
+                        var formData = {file: {value: body, options: {filename: 'xxx.jpg'}}};
+                        request.post({url:fsServer, formData: formData}, function(err, res, body) {
+                            if (err) {
+                                return callback(err, null);
+                            }
+                            try{
+                                var json = JSON.parse(body);
+                            }catch(e){
+                                return callback(e, data);
+                            }
+                            data.headimgid = json['media_id'] || "";
+                            receiveReset(self, function(){
+                                return callback(json.err, data);
+                            });
                         });
-                    });
+                    })
+
                 })
         })
         .thenCatch(function(err){
@@ -1021,7 +1044,7 @@ function spiderContent(self, unReadCount, callback){
                 if(className === 'voice'){
                     return promise.getAttribute('data-cm').then(function(attr){
                         var obj = JSON.parse(attr);
-                        getMediaFile('https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxgetvoice?msgid=' + obj.msgId, function(err, res){
+                        getMediaFile(self.baseUrl + 'cgi-bin/mmwebwx-bin/webwxgetvoice?msgid=' + obj.msgId, function(err, res){
                             if(err){
                                 return callback(err, null)
                             }
@@ -1050,6 +1073,7 @@ function spiderContent(self, unReadCount, callback){
                 request({url: url, jar: j, encoding: null}, function(err, res, body){
                     var resSplit = res.req.path.split('/');
                     var fileType = validateMedia(res.headers['content-type']);
+                    console.log("fileType: " + fileType);
                     if(!fileType){
                         setTimeout(getMediaFile(url, callback), 1000);
                         return;
