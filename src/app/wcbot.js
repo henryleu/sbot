@@ -1,6 +1,10 @@
 var TaskQueue = require('l-mq');
 var codeService = require('../services/codeService');
 var PromiseBB = require('bluebird');
+var qs = require('querystring');
+var url = require('url');
+var fs = require('fs');
+var _ = require('underscore');
 var settings = require('../app/settings');
 var webdriver = require('selenium-webdriver');
 var EventEmitter = require('events').EventEmitter;
@@ -8,22 +12,24 @@ var waitFor = require('../util').waitFor;
 var getCount = require('../util').getCount;
 var request = require('request');
 var j = request.jar();
-var fs = require('fs');
 var findSuffix = require('./suffix-map').findSuffix;
-var avatarLocator = webdriver.By.css('div.header > div.avatar');
-var searchLocator = webdriver.By.className('frm_search');
 var searchedContactLocator = webdriver.By.css(' div[data-height-calc=heightCalc]:nth-child(2) > div');
 var fsServer = settings.fsUrl;
 var chatCache = {};
 var currInteral = {};
 var reconnectTime = settings.reconnectTime;
+//funcs
 var createDriver = require('../webdriver/webdriverFactory');
-var MYERROR = require('./myerror');
 var spiderGroupListInfo = require('../funcs/group-list');
 var receiveReset = require('../funcs/reset-pointer');
-var qs = require('querystring');
-var url = require('url');
-var _ = require('underscore');
+var _findOnePro = require('../funcs/find-one-contract');
+var _readProfile = require('../funcs/read-profile');
+var suggestFriendHandler = require('../funcs/friend-suggest-message');
+var _modifyRemarkAsync = require('../funcs/modify-user-remark');
+/**
+ * @param id(string=) botid
+ * @constructor
+ */
 function WcBot(id){
     EventEmitter.call(this);
     this.id = id;
@@ -515,125 +521,6 @@ function needLogin(wcBot, callback){
     })
 }
 
-function _readProfile(bid, self, callback){
-    var box;
-    _findOnePro(self, bid, function(){
-        self.driver.sleep(500);
-        self.driver.findElement({'css': '#chatArea>.box_hd'})
-            .then(function(boxItem){
-                box = boxItem;
-                return box.findElement({'css': 'div.title_wrap>div.title.poi'})
-                    .then(function(clickbtn1){
-                        return clickbtn1.click()
-                    })
-            })
-            .then(function(){
-                return box.findElement({'css': 'div#chatRoomMembersWrap div.member:nth-child(2)>img'})
-                    .then(function(clickbtn2){
-                        self.driver.sleep(500).then(function(){
-                            return clickbtn2.click()
-                        })
-                        .then(function(){
-                            return self.driver.sleep(2000);
-                        })
-                    })
-                    .thenCatch(function(err){
-                        console.log("err --------"+err)
-                    })
-            })
-            .then(function(){
-                _readProfileChain(self, function(err, data){
-                    if(err){
-                        console.error('Failed to read Profile Chain');
-                        return callback(err);
-                    }
-                    return callback(null, data);
-                })
-            })
-            .thenCatch(function(err){
-                console.log("readprofile err---------" + err)
-                return callback(err)
-            })
-    });
-}
-
-function _readProfileChain(self, callback){
-    var data = {},
-        pop;
-    self.driver.findElement({'css': 'div#mmpop_profile>div.profile_mini'})
-        .then(function(popItem){
-            pop = popItem;
-            return pop.findElement({'css': 'div.profile_mini_bd>div.meta_area>div.meta_item:nth-child(2) p'})
-                .then(function(placeItem){
-                    return placeItem.getText()
-                })
-                .then(function(placetxt){
-                    data.place = placetxt;
-                    data.botid = self.id;
-                    return;
-                })
-        })
-        .then(function(){
-            return pop.findElement({'css': 'div.profile_mini_bd>div.nickname_area h4'})
-                .then(function(h4){
-                    h4.getText()
-                        .then(function(txt){
-                            return data.nickname = txt;
-                        })
-                })
-        })
-        .then(function(){
-            return pop.findElement({'css': 'div.profile_mini_bd>div.meta_area>div.meta_item:nth-child(1) p'})
-                .then(function(bidItem){
-                    return bidItem.getText()
-                })
-                .then(function(bidtxt){
-                    return data.bid = bidtxt;
-                })
-        })
-        .then(function(){
-            return pop.findElement({'css': 'div.profile_mini_hd img'})
-                .then(function(headImg){
-                    return headImg.getAttribute('src')
-                })
-                .then(function(src){
-                    var urlJson = _.pick(url.parse(src), 'protocol', 'slashes', 'host', 'hostname', 'pathname');
-                    var qsJson = qs.parse(url.parse(src).query);
-                    delete qsJson["skey"];
-                    delete qsJson["type"];
-                    urlJson.search = qs.stringify(qsJson);
-                    var formatUrl = url.format(urlJson);
-                    request.get({url: formatUrl, jar: j, encoding: null}, function(err, res, body){
-                        console.log("body------" + body);
-                        if(body && body.length){
-                            console.log(body.length)
-                        }
-                        var formData = {file: {value: body, options: {filename: 'xxx.jpg'}}};
-                        request.post({url:fsServer, formData: formData}, function(err, res, body) {
-                            if (err) {
-                                return callback(err, null);
-                            }
-                            try{
-                                var json = JSON.parse(body);
-                            }catch(e){
-                                return callback(e, data);
-                            }
-                            data.headimgid = json['media_id'] || "";
-                            receiveReset(self, function(){
-                                return callback(json.err, data);
-                            });
-                        });
-                    })
-
-                })
-        })
-        .thenCatch(function(err){
-            receiveReset(self, function(){
-                return callback(err);
-            });
-        })
-}
-
 function _addContact(id, encodeId, callback){
     var self = this;
     var nickname = id;
@@ -690,227 +577,9 @@ function _findOneInChatAysnc(self, id){
         })
 }
 
-function _findElementsInChatAysnc(self){
-    return self.driver.findElements({'css': '#chatArea div.card>div.card_bd>div.info>h3'})
-        .then(function(items){
-            return items
-        })
-        .thenCatch(function(e){
-            console.log('Failed to findOne in chat[code]-----' + JSON.stringify(e))
-        })
-}
-
-function _modifyRemarkAsync(self, codeTmp){
-    var item, code, nickName;
-    if(!codeTmp){
-        code = codeService.fetch();
-    }
-    return self.driver.findElement({'css' :'#mmpop_profile >div.profile_mini >div.profile_mini_bd'})
-        .then(function(itemtmp){
-            item = itemtmp;
-            item.findElement({'css': 'div.nickname_area h4'})
-                .then(function(h4El){
-                    return h4El.getText()
-                })
-                .then(function(txt){
-                    console.log("-----------------------");
-                    console.log(txt);
-                    return nickName = txt;
-                })
-        })
-        .then(function(){
-            return item.findElement({'css': 'div.meta_area p'})
-        })
-        .then(function(itemp){
-            return self.driver.sleep(200)
-                .then(function(){
-                    return itemp.click()
-                        .then(function(){
-                            return self.driver.executeScript('window.document.querySelector("div.meta_area p").innerText = "";')
-                        })
-                        .then(function(){
-                            return itemp.sendKeys(code)
-                        })
-                        .then(function(){
-                            return self.driver.sleep(500)
-                        })
-                        .then(function(){
-                            return self.driver.executeScript('window.document.querySelector("div.meta_area p").blur();')
-                        })
-                        .then(function(){
-                            return self.driver.sleep(500)
-                        })
-                })
-        })
-        .then(function(){
-            return self.driver.findElement({css: '#mmpop_profile >div.profile_mini >div.profile_mini_bd a'})
-                .then(function(plusBtn){
-                    return plusBtn.click();
-                })
-                .then(function(){
-                    return {
-                        code: code,
-                        nickName: nickName
-                    };
-                })
-                .thenCatch(function(e){
-                    console.log('err occur---------');
-                    console.error(e);
-                });
-        })
-        .thenCatch(function(err){
-            console.log("Failed to modify remark [code]---------")
-            console.log(err)
-        })
-}
-
-function _findOnePro(self, id, callback){
-    var searchInput = null;
-    self.driver.findElement(searchLocator)
-        .then(function(searchItem){
-            searchInput = searchItem;
-            return searchItem.sendKeys(id);
-        })
-        .then(function(){
-            console.log('send ok');
-            return self.driver.sleep(1000);
-        })
-        .then(function(){
-            return self.driver.findElements({
-                'css': 'div.contact_item.on'
-            })
-        })
-        .then(function (collection) {
-            if(collection.length <= 0){
-                //no search contact to send
-                return webdriver.promise.rejected(new webdriver.error.Error(801, 'no_result'))
-            }
-            var len = collection.length;
-            var i=0;
-            collection.map(function (item) {
-                var contactItem = item;
-                item.findElement({'css': 'h4.nickname'})
-                    .then(function(infoItem){
-                        return infoItem.getText()
-                    .then(function (value) {
-                        console.log("group nick name--------" + value);
-                        i++;
-                        if (value === id) {
-                            console.log("group name equals " + value)
-                            contactItem.click()
-                                .then(function(){
-                                    console.log('the button clicked')
-                                    callback(null, null);
-                                })
-                                .thenCatch(function(e){
-                                    console.log(e);
-                                    callback(e, null);
-                                });
-                        }
-                        else if(i === len){
-                            //send to is not exist
-                            receiveReset(self, function(){
-                                searchInput.clear()
-                                    .then(function(){
-                                        callback(new Error('user does not exist'));
-                                    })
-                                    .thenCatch(function(e){
-                                        callback(new Error('Failed to clear search input'));
-                                    })
-                            });
-                        }
-                        else{
-                            //unknow error
-                            console.log('process stop error: unknow error');
-                        }
-                    })
-                    .thenCatch(function(e){
-                        console.log('error occur-----------');
-                        console.log(e);
-                        callback(e, null)
-                    })
-                });
-            });
-        })
-        .thenCatch(function(e){
-            if(e.code == MYERROR.NO_RESULT){
-                searchInput.clear()
-                    .then(function(){
-                        receiveReset(self, callback, e);
-                    })
-            }
-        })
-}
-
 function pollingDispatcher(input){
     var handlers = {
-        '朋友推荐消息': function(self, item, parentItem, callback){
-            parentItem.click()
-                .then(function(){
-                    return self.driver.sleep(500);
-                })
-                .then(function(){
-                return _findElementsInChatAysnc(self)
-                    .then(function(items){
-                        var promiseArr = [];
-                        items.forEach(function(item){
-                            promiseArr.push(addOneUserAsync(self, item));
-                        });
-                        PromiseBB.all(promiseArr).then(function(arr){
-                            return arr;
-                        })
-                    })
-                    .then(function() {
-                        return self.driver.sleep(1000)
-                    })
-                    .then(function(){
-                        return clearPanelAsync();
-                    })
-                    .then(function() {
-                        return receiveReset(self, callback);
-                    })
-                    .thenCatch(function(err){
-                        console.log("Failed to add contact----");
-                        console.log(err);
-                        callback();
-                    })
-            });
-            function addOneUserAsync(self, item){
-                return item.click()
-                .then(function(){
-                    return _modifyRemarkAsync(self)
-                })
-                .then(function(profile){
-                    self.emit('contactAdded', {err: null, data: {botid: self.id, bid: profile.code, nickname: profile.nickName}});
-
-                })
-            }
-            function clearPanelAsync(){
-                var chatArea, posX;
-                return self.driver.findElement({css: '.chat_bd'})
-                .then(function(item){
-                    chatArea = item;
-                    return self.driver.executeScript('return document.querySelector(".chat_bd").clientWidth')
-                })
-                .then(function(width){
-                    posX = parseInt(width, 10) - 10;
-                    return new webdriver.ActionSequence(self.driver)
-                        .mouseMove(chatArea, {x: posX, y:0})
-                        .click(chatArea,  webdriver.Button.RIGHT)
-                        .perform();
-                })
-                .then(function(){
-                    console.log("action execute ok**************************");
-                    return self.driver.findElement({css: 'a[ng-click="item.callback()"]'})
-                })
-                .then(function(item){
-                    return item.click();
-                })
-                .then(function(){
-                    return self.driver.sleep(500);
-                })
-            }
-        },
+        '朋友推荐消息': suggestFriendHandler,
         'defaultHandler': function(self, item, parentItem, callback){
             self.sendTo = input;
             item.getText()

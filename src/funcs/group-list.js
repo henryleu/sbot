@@ -25,6 +25,9 @@ module.exports = function(self, callback){
     driver.call(function(){
         var receiveCount = 0;
         return spiderGroupList(driver, groupNameArr).then(function (arr) {
+            if(!arr.length){
+                return callback(null,[]);
+            }
             receiveCount = arr.length;
             groupNameArr = groupNameArr.concat(arr);
             return iterator(new webdriver.promise.fulfilled());
@@ -113,9 +116,9 @@ function spiderGroupList(driver, groupNameArr){
                         console.error(e.stack);
                     })
             })
-                .thenCatch(function (e) {
-                    console.error(e.stack)
-                });
+            .thenCatch(function (e) {
+                console.error(e.stack)
+            });
         })
 }
 
