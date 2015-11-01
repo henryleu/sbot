@@ -1027,7 +1027,7 @@ function spiderContent(self, unReadCount, callback){
                     })
                     .then(function(url){
                         console.log("img url----------------" + url);
-                        getMediaFile(url, function(err, res){
+                        getMediaFile(url, 'jpg', function(err, res){
                             if(err){
                                 return callback(err, null)
                             }
@@ -1044,7 +1044,7 @@ function spiderContent(self, unReadCount, callback){
                 if(className === 'voice'){
                     return promise.getAttribute('data-cm').then(function(attr){
                         var obj = JSON.parse(attr);
-                        getMediaFile(self.baseUrl + 'cgi-bin/mmwebwx-bin/webwxgetvoice?msgid=' + obj.msgId, function(err, res){
+                        getMediaFile(self.baseUrl + 'cgi-bin/mmwebwx-bin/webwxgetvoice?msgid=' + obj.msgId, 'mp3', function(err, res){
                             if(err){
                                 return callback(err, null)
                             }
@@ -1068,37 +1068,25 @@ function spiderContent(self, unReadCount, callback){
                 var url = src.split('&type=slave')[0];
                 return url;
             }
-            function getMediaFile(url, callback){
+            function getMediaFile(url, fileType, callback){
                 console.log("getFileUrl-------------" + url);
-                request({url: url, jar: j, encoding: null}, function(err, res, body){
-                    var resSplit = res.req.path.split('/');
-                    var fileType = validateMedia(res.headers['content-type']);
-                    console.log("fileType: " + fileType);
-                    if(!fileType){
-                        setTimeout(getMediaFile(url, callback), 1000);
-                        return;
+                var formData = {
+                    file: {
+                        value: request({url: url, jar: j, encoding: null}),
+                        options: {
+                            filename: 'xxx.' + fileType
+                        }
                     }
-                    console.log("filename-------------" + resSplit[resSplit.length-1]);
-                    console.log("contentType-------------" + res.headers['content-type']);
-                    var formData = {
-                        file: {
-                            value: request({url: url, jar: j, encoding: null}),
-                            options: {
-                                filename: 'xxx.' + fileType,
-                                //contentType: res.headers['content-type']
-                            }
-                        }
-                    };
-                    request.post({url:fsServer, formData: formData}, function(err, res, body) {
-                        if (err) {
-                            return callback(err, null);
-                        }
-                        var json = JSON.parse(body);
-                        if(json.err){
-                            return call(json.err, null);
-                        }
-                        callback(null, json);
-                    });
+                };
+                request.post({url:fsServer, formData: formData}, function(err, res, body) {
+                    if (err) {
+                        return callback(err, null);
+                    }
+                    var json = JSON.parse(body);
+                    if(json.err){
+                        return call(json.err, null);
+                    }
+                    callback(null, json);
                 });
             }
             function validateMedia(type){
