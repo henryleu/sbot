@@ -2,6 +2,12 @@ var webdriver = require('selenium-webdriver');
 //external services
 var reset = require('./reset-pointer');
 var _findOnePro = require('../funcs/find-one-contract');
+var settings = require('../app/settings');
+var fsServer = settings.fsUrl;
+var _ = require('underscore');
+var qs = require('querystring');
+var url = require('url');
+var request = require('request');
 
 module.exports = _readProfile;
 
@@ -42,6 +48,7 @@ function _readProfile(bid, self, callback){
                 _readProfileChain(self, function(err, data){
                     if(err){
                         console.error('Failed to read Profile Chain');
+                        console.error(err);
                         return callback(err);
                     }
                     return callback(null, data);
@@ -100,10 +107,9 @@ function _readProfileChain(self, callback){
                     delete qsJson["type"];
                     urlJson.search = qs.stringify(qsJson);
                     var formatUrl = url.format(urlJson);
-                    request.get({url: formatUrl, jar: j, encoding: null}, function(err, res, body){
-                        console.log("body------" + body);
+                    request.get({url: formatUrl, jar: self.j, encoding: null}, function(err, res, body){
                         if(body && body.length){
-                            console.log(body.length)
+                            console.log("body  length  "+body.length)
                         }
                         var formData = {file: {value: body, options: {filename: 'xxx.jpg'}}};
                         request.post({url:fsServer, formData: formData}, function(err, res, body) {

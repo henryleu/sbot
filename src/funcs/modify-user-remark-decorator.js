@@ -23,10 +23,17 @@ module.exports = function(self, codeTmp, parentItem){
         })
         .then(function(){
             //click the plus btn
-            return self.driver.findElement({css: 'a.opt.ng-scope'})
+            return self.driver.sleep(1000)
+                .then(function(){
+                    return self.driver.findElement({css: 'a.opt.ng-scope'})
+                })
                 .then(function(plusBtn){
                     console.log("prepare to click plus btn");
-                    return plusBtn.click();
+                    return plusBtn.click()
+                        .thenCatch(function(e){
+                            console.error('Failed to click the plus btn')
+                            console.error(e)
+                        })
                 })
                 .thenCatch(function(e){
                     console.log('err occur---------');
@@ -39,6 +46,10 @@ module.exports = function(self, codeTmp, parentItem){
                 .then(function(){
                     console.log("plus btn is clicked--------");
                     return parentItem.click()
+                        .thenCatch(function(e){
+                            console.error('Failed to click the parent btn')
+                            console.error(e)
+                        })
                 })
         })
         .then(function(){

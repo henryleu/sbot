@@ -1,17 +1,13 @@
 var TaskQueue = require('l-mq');
 var codeService = require('../services/codeService');
 var PromiseBB = require('bluebird');
-var qs = require('querystring');
-var url = require('url');
 var fs = require('fs');
-var _ = require('underscore');
 var settings = require('../app/settings');
 var webdriver = require('selenium-webdriver');
 var EventEmitter = require('events').EventEmitter;
 var waitFor = require('../util').waitFor;
 var getCount = require('../util').getCount;
 var request = require('request');
-var j = request.jar();
 var findSuffix = require('./suffix-map').findSuffix;
 var searchedContactLocator = webdriver.By.css(' div[data-height-calc=heightCalc]:nth-child(2) > div');
 var fsServer = settings.fsUrl;
@@ -40,6 +36,7 @@ function WcBot(id){
     this.callCsToLogin = null;
     this.waitForLogin = null;
     this.baseUrl = "";
+    this.j = request.jar();
 }
 var util = require('util');
 util.inherits(WcBot, EventEmitter);
@@ -233,7 +230,7 @@ WcBot.prototype._polling = function(){
         self.driver.manage().getCookies().then(function(cookies){
             cookies.forEach(function(cookie){
                 var requestCookie = request.cookie(cookie.name + '=' + cookie.value);
-                j.setCookie(requestCookie, self.baseUrl);
+                self.j.setCookie(requestCookie, self.baseUrl);
             });
             polling();
         });
@@ -473,7 +470,7 @@ function getLoginQr(wcBot, callback){
                     console.log(src)
                     var formData = {
                         file: {
-                            value: request({url: src, jar: j, encoding: null}),
+                            value: request({url: src, jar: self.j, encoding: null}),
                             options: {
                                 filename: 'xxx.jpg'
                             }
@@ -741,7 +738,7 @@ function spiderContent(self, unReadCount, callback){
                 console.log("getFileUrl-------------" + url);
                 var formData = {
                     file: {
-                        value: request({url: url, jar: j, encoding: null}),
+                        value: request({url: url, jar: self.j, encoding: null}),
                         options: {
                             filename: 'xxx.' + fileType
                         }
