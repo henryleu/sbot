@@ -16,8 +16,7 @@ module.exports = function(self, codeTmp, parentItem){
                     return h4El.getText()
                 })
                 .then(function(txt){
-                    console.log("-----------------------");
-                    console.log(txt);
+                    console.log("[flow]:contact user,s nickname is " + txt);
                     return nickName = txt;
                 })
         })
@@ -28,7 +27,7 @@ module.exports = function(self, codeTmp, parentItem){
                     return self.driver.findElement({css: 'a.opt.ng-scope'})
                 })
                 .then(function(plusBtn){
-                    console.log("prepare to click plus btn");
+                    console.log("[flow]:prepare to click plus btn");
                     return plusBtn.click()
                         .thenCatch(function(e){
                             console.error('Failed to click the plus btn')
@@ -44,7 +43,7 @@ module.exports = function(self, codeTmp, parentItem){
             //click back to the user
             return self.driver.sleep(1000)
                 .then(function(){
-                    console.log("plus btn is clicked--------");
+                    console.log("[flow]:plus btn is clicked");
                     return parentItem.click()
                         .thenCatch(function(e){
                             console.error('Failed to click the parent btn')
@@ -53,7 +52,7 @@ module.exports = function(self, codeTmp, parentItem){
                 })
         })
         .then(function(){
-            console.log("parent btn is clicked--------");
+            console.log("[flow]:parent btn is clicked");
             //add remark
             return self.driver.findElement({'css': 'div.meta_area p[contenteditable]'})
         })
@@ -80,7 +79,7 @@ module.exports = function(self, codeTmp, parentItem){
                                 })
                         })
                         .then(function(){
-                            console.log("modify remark ok");
+                            console.log("[flow]:modify remark ok");
                             return self.driver.sleep(1000)
                         })
                         .then(function(){

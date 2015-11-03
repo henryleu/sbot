@@ -40,7 +40,7 @@ module.exports = function(self, item, parentItem, callback){
                 return _modifyRemarkAsync(self, null, item);
             })
             .then(function(profile){
-                console.log("profile--------------");
+                console.log("[flow]:the contact has been added, the profile is****");
                 console.log(profile);
                 self.emit('contactAdded', {err: null, data: {botid: self.id, bid: profile.code, nickname: profile.nickName}});
 
@@ -62,7 +62,7 @@ module.exports = function(self, item, parentItem, callback){
                     .perform();
             })
             .then(function(){
-                console.log("action execute ok**************************");
+                console.log("[flow]:the recommend panel has been clear");
                 return self.driver.findElement({css: 'a[ng-click="item.callback()"]'})
             })
             .then(function(item){

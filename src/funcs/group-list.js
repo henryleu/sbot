@@ -9,6 +9,7 @@ var closeLocator = webdriver.By.css('div.ngdialog-close');
  * @param callback
  */
 module.exports = function(self, callback){
+    console.info("[transaction]: begin to read group list");
     var driver = self.driver;
     var groupNameArr = [];
     driver.findElement({'css': '.web_wechat_add'}).click();
@@ -77,6 +78,8 @@ module.exports = function(self, callback){
             });
         });
     }).thenCatch(function(e){
+        console.error('[flow]: Failed to read group list');
+        console.error(e);
         callback(e);
     });
 };
@@ -113,10 +116,12 @@ function spiderGroupList(driver, groupNameArr){
                             })
                     })
                     .thenCatch(function (e) {
+                        console.error('[flow]: Failed to read group list');
                         console.error(e.stack);
                     })
             })
             .thenCatch(function (e) {
+                console.error('[flow]: Failed to read group list');
                 console.error(e.stack)
             });
         })

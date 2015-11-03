@@ -22,6 +22,7 @@ var _findOnePro = require('../funcs/find-one-contract');
 var _readProfile = require('../funcs/read-profile');
 var suggestFriendHandler = require('../funcs/friend-suggest-message');
 var _modifyRemarkAsync = require('../funcs/modify-user-remark');
+var receiveMessageHandler = require('../funcs/receive-message');
 /**
  * @param id(string=) botid
  * @constructor
@@ -88,13 +89,17 @@ WcBot.prototype.stop = function(){
  */
 WcBot.prototype.send = function(json, callback) {
     var self = this;
+    console.info("[transaction]: Begin to send message to the contact which bid is " + json.sendTo);
     self.taskQueue.enqueue(function(cb) {
         self.sendTo = json.sendTo;
         var content = json.content;
         self._findOne(function (err) {
             if(err){
+                console.warn("[flow]: Failed to find the contact");
+                console.warn(err);
                 return cb();
             }
+            console.info("[flow]: Succeed to find the contact");
             self.driver.findElement({'css': '#editArea'})
                 .then(function (item) {
                     return item.sendKeys(content);
@@ -106,6 +111,7 @@ WcBot.prototype.send = function(json, callback) {
                     return sendInput.click()
                 })
                 .then(function () {
+                    console.info("[flow]: send message successful");
                     receiveReset(self, cb);
                 })
                 .thenCatch(function (e) {
@@ -142,10 +148,10 @@ WcBot.prototype.groupList = function(bid, callback){
  */
 WcBot.prototype.onLogin = function(handler){
     var self = this;
-    this.removeAllListeners('login').on('login', function(data){
+    self.removeAllListeners('login').on('login', function(data){
         handler.call(self, data.err, data.data)
     });
-}
+};
 
 /**
  * Attach a abort listener on WcBot
@@ -156,7 +162,7 @@ WcBot.prototype.onAbort = function(handler){
     this.removeAllListeners('abort').on('abort', function(data){
         handler.call(self, data.err, data.data)
     });
-}
+};
 
 /**
  * Attach a listener to WcBot, onReceive is invoke when a msg being received.
@@ -236,6 +242,9 @@ WcBot.prototype._polling = function(){
         });
     }
     function polling(){
+        //if(getCount()%5 === 0){
+            console.info("[system]: the application continue to poll");
+        //}
         if(!self.loggedIn){
             return;
         }
@@ -367,9 +376,9 @@ WcBot.prototype._walkChatList = function(callback){
                         return h3El.getText()
                     })
                     .then(function(txt){
-                        console.log("******************")
-                        console.log(txt);
-                        return pollingDispatcher(txt)(self, iblockTemp, item, callback);
+                        console.info("[transaction] -receive : a new message received");
+                        console.log("[flow]: the title is " + txt);
+                        return pollingDispatcher(self, txt)(self, iblockTemp, item, callback);
                     })
                     .thenCatch(function(e){
                         return iterator(index+1)
@@ -508,13 +517,15 @@ function getLoginQr(wcBot, callback){
 function needLogin(wcBot, callback){
     var self = wcBot;
     getLoginQr(self, function(err, data){
-        console.log("-------------");
-        console.log("get login qrcode successful the media_id is [ " + data.media_id + " ]");
-        if(!err){
+        if(err){
+            console.error('Failed to get Qrcode that used to login');
+            callback(err, null);
+        }else{
+            console.log("-------------");
+            console.log("get login qrcode successful the media_id is [ " + data.media_id + " ]");
             self.emit('needLogin', {err: null, data:{wx_media_id: data.wx_media_id, media_id: data.media_id, botid: self.id}});
             return callback(null, null);
         }
-        callback(err, null);
     })
 }
 
@@ -574,195 +585,16 @@ function _findOneInChatAysnc(self, id){
         })
 }
 
-function pollingDispatcher(input){
+function pollingDispatcher(self,input){
     var handlers = {
         '朋友推荐消息': suggestFriendHandler,
-        'defaultHandler': function(self, item, parentItem, callback){
+        'Recommend' : suggestFriendHandler,
+        'defaultHandler': (function(input){
             self.sendTo = input;
-            item.getText()
-                .then(function(count){
-                    parentItem.click()
-                    .then(function(){
-                        return self.driver.sleep(200);
-                    })
-                    .then(function(){
-                        spiderContent(self, count, function(err, msgArr){
-                            if(msgArr){
-                                self.emit('receive', {err: null, data: {msgArr: msgArr}});
-                            }
-                            return receiveReset(self, callback);
-                        })
-                    })
-                    .thenCatch(function(e){
-                        console.error(e);
-                    })
-                })
-                .thenCatch(function(err){
-                    console.log("Failed to receive msg [code]-----")
-                    console.log(err);
-                })
-        }
+            return receiveMessageHandler;
+        })(input)
     };
     return handlers[input] || handlers['defaultHandler'];
-}
-
-function spiderContent(self, unReadCount, callback){
-    //walk in dom
-    self.driver.findElement({'css': '#chatArea'})
-        .then(function(chatwrapper){
-            return chatwrapper.findElements({'css': '.js_message_bubble'})
-        })
-        .then(function(collection){
-            var unreadArr = collection.slice(-unReadCount);
-            var PromiseArr = [];
-            unreadArr.forEach(function(item){
-                PromiseArr.push(_getContentAsync(self, item));
-            });
-            return PromiseBB.all(PromiseArr).then(function(arr){
-                return arr;
-            })
-        })
-        .then(function(msgArr){
-            return callback(null, msgArr);
-        })
-        .thenCatch(function(e){
-            console.log("err--------------");
-            console.log(e);
-            return callback(e);
-        });
-    var _getContentAsync = PromiseBB.promisify(_getContent);
-    function _getContent(self, promise, callback){
-        var currNode = null;
-        try{
-            var msg = {
-                MsgId: Math.ceil(parseInt(new Date().getTime(), 10)/1000).toString(),
-                FromUserName: self.sendTo,
-                ToUserName: self.id,
-                CreateTime: parseInt(new Date().getTime(), 10).toString()
-            };
-        }catch(e){
-            console.log(e)
-        }
-        promise.findElement({'css': '.bubble_cont >div'})
-            .then(function(item){
-                currNode = item;
-                return item.getAttribute('class')
-            })
-            .then(function(className){
-                if(className === 'plain'){
-                    console.log('plain-------------');
-                    currNode.findElement({'css': 'pre.js_message_plain'})
-                    .then(function(preEl){
-                        console.log("preEl---------------")
-                        preEl.getText().then(function(payLoad){
-                            console.log('payLoad');
-                            console.log(payLoad);
-                            if(payLoad){
-                                msg['Content'] = payLoad;
-                                msg['MsgType'] = 'text';
-                                return callback(null, msg);
-                            } else {
-                                preEl.findElement({'css': 'img'})
-                                    .then(function(img){
-                                        return img.getAttribute('text');
-                                    })
-                                    .then(function(text){
-                                        //custom expression eg: [开心]_web
-                                        msg['Content'] = text.split('_')[0];
-                                        msg['MsgType'] = 'text';
-                                        callback(null, msg);
-                                    })
-                            }
-
-                        })
-                    })
-                    .thenCatch(function(e){
-                        console.log('receive message failed-----');
-                        console.log(e);
-                        return callback(e, null)
-                    })
-                }
-                if(className === 'picture'){
-                    console.log("receive a img message----------------");
-                    return currNode.findElement({'css': '.msg-img'})
-                    .then(function(img){
-                        return img.getAttribute('src')
-                    })
-                    .then(function(src){
-                        return getMediaUrl(src)
-                    })
-                    .then(function(url){
-                        console.log("img url----------------" + url);
-                        getMediaFile(url, 'jpg', function(err, res){
-                            if(err){
-                                return callback(err, null)
-                            }
-                            msg['MediaId'] = res['wx_media_id'];
-                            msg['FsMediaId'] = res['media_id'];
-                            msg['MsgType'] = 'image';
-                            callback(null, msg);
-                        })
-                    })
-                    .thenCatch(function(e){
-                        callback(e, null)
-                    })
-                }
-                if(className === 'voice'){
-                    return promise.getAttribute('data-cm').then(function(attr){
-                        var obj = JSON.parse(attr);
-                        getMediaFile(self.baseUrl + 'cgi-bin/mmwebwx-bin/webwxgetvoice?msgid=' + obj.msgId, 'mp3', function(err, res){
-                            if(err){
-                                return callback(err, null)
-                            }
-                            msg['MediaId'] = res['wx_media_id'];
-                            msg['FsMediaId'] = res['media_id'];
-                            msg['MsgType'] = 'voice';
-                            callback(null, msg);
-                        });
-                    })
-                    .thenCatch(function(e){
-                        callback(e, null)
-                    })
-                }
-            })
-            .thenCatch(function(e){
-                console.log('spider content error-------');
-                console.log(e.stack)
-                return callback(e, null);
-            });
-            function getMediaUrl(src){
-                var url = src.split('&type=slave')[0];
-                return url;
-            }
-            function getMediaFile(url, fileType, callback){
-                console.log("getFileUrl-------------" + url);
-                var formData = {
-                    file: {
-                        value: request({url: url, jar: self.j, encoding: null}),
-                        options: {
-                            filename: 'xxx.' + fileType
-                        }
-                    }
-                };
-                request.post({url:fsServer, formData: formData}, function(err, res, body) {
-                    if (err) {
-                        return callback(err, null);
-                    }
-                    var json = JSON.parse(body);
-                    if(json.err){
-                        return call(json.err, null);
-                    }
-                    callback(null, json);
-                });
-            }
-            function validateMedia(type){
-            try{
-                return findSuffix(type);
-            }catch(e){
-                return false;
-            }
-        }
-    }
 }
 
 function replayMsg(self, count){

@@ -12,9 +12,11 @@ var request = require('request');
 module.exports = _readProfile;
 
 function _readProfile(bid, self, callback){
+    console.info("[transaction]: begin to read profile of contact that bid is " + bid);
     var box;
     _findOnePro(self, bid, function(e){
         if(e){
+            console.error("[flow]: Failed to find the contact that bid is " + bid);
             return callback(e);
         }
         self.driver.sleep(500);
@@ -36,6 +38,7 @@ function _readProfile(bid, self, callback){
                             return clickbtn2.click()
                         })
                             .then(function(){
+                                console.info('[flow]: the profile panel is opened');
                                 return self.driver.sleep(2000);
                             })
                     })
@@ -47,16 +50,19 @@ function _readProfile(bid, self, callback){
             .then(function(){
                 _readProfileChain(self, function(err, data){
                     if(err){
-                        console.error('Failed to read Profile Chain');
+                        console.error('[flow]: Failed to read profile');
                         console.error(err);
                         return callback(err);
                     }
+                    console.info('[flow]: Succeed to read profile');
+                    console.info(data);
                     return callback(null, data);
                 })
             })
             .thenCatch(function(err){
-                console.log("readprofile err---------" + err)
-                return callback(err)
+                console.error('[flow]: Failed to read profile');
+                console.error(err);
+                return callback(err);
             })
     });
 }
@@ -72,6 +78,7 @@ function _readProfileChain(self, callback){
                     return placeItem.getText()
                 })
                 .then(function(placetxt){
+                    console.info('[flow]: place is ' + placetxt);
                     data.place = placetxt;
                     data.botid = self.id;
                     return;
@@ -82,6 +89,7 @@ function _readProfileChain(self, callback){
                 .then(function(h4){
                     h4.getText()
                         .then(function(txt){
+                            console.info('[flow]: nickname is ' + txt);
                             return data.nickname = txt;
                         })
                 })
@@ -121,6 +129,7 @@ function _readProfileChain(self, callback){
                             }catch(e){
                                 return callback(e, data);
                             }
+                            console.info('[flow]: Succeed to upload the headImg');
                             data.headimgid = json['media_id'] || "";
                             reset(self, function(){
                                 return callback(json.err, data);
