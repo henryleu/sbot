@@ -14,6 +14,7 @@ var fsServer = settings.fsUrl;
 var chatCache = {};
 var currInteral = {};
 var reconnectTime = settings.reconnectTime;
+var myErr = require('./myerror');
 //funcs
 var createDriver = require('../webdriver/webdriverFactory');
 var spiderGroupListInfo = require('../funcs/group-list');
@@ -259,12 +260,15 @@ WcBot.prototype._polling = function(){
                         });
                     } else {
                         //connection is ok, check whether msgs are arrived
-                        return self.taskQueue.enqueue(self._walkChatList.bind(self), null, polling);
+                        return self.taskQueue.enqueue(self._walkChatList.bind(self), null, function(err){
+                            console.log(err);
+                            polling();
+                        });
                     }
                 });
             }
             return self.taskQueue.enqueue(self._walkChatList.bind(self), null, polling);
-        }, 1000);
+        }, 3000);
     }
 };
 
@@ -364,24 +368,42 @@ WcBot.prototype._walkChatList = function(callback){
     var self = this;
     self.driver.findElements({'css': 'div[ng-repeat*="chatContact"]'})
         .then(function(collection){
+            var len = collection.length;
             function iterator(index){
                 var item = collection[index];
                 var iblockTemp = null;
                 item.findElement({'css': 'i.web_wechat_reddot_middle.icon'})
                     .then(function(iblock){
+                        if(!iblock){
+                            return webdriver.promise.rejected(new webdriver.error.Error(801, 'no_result'))
+                        }
                         iblockTemp = iblock;
                         return item.findElement({'css': 'span.nickname_text'})
-                    })
-                    .then(function(h3El){
-                        return h3El.getText()
-                    })
-                    .then(function(txt){
-                        console.info("[transaction] -receive : a new message received");
-                        console.log("[flow]: the title is " + txt);
-                        return pollingDispatcher(self, txt)(self, iblockTemp, item, callback);
+                            .then(function(h3El){
+                                return h3El.getText()
+                            })
+                            .then(function(txt){
+                                console.info("[transaction] -receive : a new message received");
+                                console.log("[flow]: the title is " + txt);
+                                return pollingDispatcher(self, txt)(self, iblockTemp, item, callback);
+                            })
+                            .thenCatch(function(e){
+                                console.info("[flow]: walk In dom failed");
+                                console.error(e);
+                                callback(e);
+                            })
                     })
                     .thenCatch(function(e){
-                        return iterator(index+1)
+                        if(e.code === 7){
+                            index++;
+                            if(index <= (len-1)){
+                                return iterator(index)
+                            }
+                            console.info("[transaction]: -walk In dom - nothing income");
+                            return callback(null, null);
+                        }
+                        console.error(e);
+                        callback(e);
                     })
             }
             iterator(0);

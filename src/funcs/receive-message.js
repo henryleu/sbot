@@ -4,7 +4,6 @@ var reset = require('../funcs/reset-pointer');
 var fsServer = require('../app/settings').fsUrl;
 
 module.exports = function(self, item, parentItem, callback){
-    console.info("[transaction]: begin to receive a message");
     item.getText()
         .then(function(count){
             parentItem.click()
