@@ -51,7 +51,9 @@ WcBot.prototype.start = function(){
     self._login(function(err, data){
         console.log('login ok');
         if(err) {
-
+            self.stop().then(function(){
+                self.start();
+            })
         }else{
             self._polling();
         }
@@ -243,9 +245,9 @@ WcBot.prototype._polling = function(){
         });
     }
     function polling(){
-        //if(getCount()%5 === 0){
+        if(getCount()%10 === 0){
             console.info("[system]: the application continue to poll");
-        //}
+        }
         if(!self.loggedIn){
             return;
         }
@@ -331,6 +333,9 @@ WcBot.prototype._login = function(callback){
                     .thenCatch(function(e){
                         console.error("[system]: Failed to wait for login");
                         console.error(e);
+                        self.stop().then(function(){
+                            self.start();
+                        });
                     })
             }, 2000);
         })
