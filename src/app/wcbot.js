@@ -424,14 +424,14 @@ function getLoginQr(wcBot, callback){
                     };
                     request.post({url: fsServer, formData: formData}, function(err, res, body) {
                         if(err){
-                            console.error('Failed to upload qr img when client disconnect');
+                            console.error('[system]: Failed to upload qr img when client disconnect');
                             console.error(err);
                             return callback(err, null);
                         }
                         try{
                             var json = JSON.parse(body);
                         }catch(e){
-                            console.error("[system]: JSON parse error");
+                            console.error("[system]: -Failed to get login qrcode -m JSON parse error");
                             console.error(body);
                             return callback(e, null);
                         }
@@ -442,12 +442,12 @@ function getLoginQr(wcBot, callback){
                     });
                 })
                 .thenCatch(function(e){
-                    console.error('Failed to get img attribute when client disconnect');
+                    console.error('[system]: Failed to get img attribute when client disconnect');
                     return callback(e, null);
                 })
         })
         .thenCatch(function(e){
-            console.error('Failed to find img node when client disconnect');
+            console.error('[system]: Failed to find img node when client disconnect');
             return callback(e, null);
         })
 }
