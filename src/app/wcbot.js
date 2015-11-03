@@ -1,20 +1,13 @@
 var TaskQueue = require('l-mq');
-var codeService = require('../services/codeService');
-var PromiseBB = require('bluebird');
-var fs = require('fs');
 var settings = require('../app/settings');
 var webdriver = require('selenium-webdriver');
 var EventEmitter = require('events').EventEmitter;
 var waitFor = require('../util').waitFor;
 var getCount = require('../util').getCount;
 var request = require('request');
-var findSuffix = require('./suffix-map').findSuffix;
-var searchedContactLocator = webdriver.By.css(' div[data-height-calc=heightCalc]:nth-child(2) > div');
 var fsServer = settings.fsUrl;
-var chatCache = {};
-var currInteral = {};
-var reconnectTime = settings.reconnectTime;
 var myErr = require('./myerror');
+var util = require('util');
 //funcs
 var createDriver = require('../webdriver/webdriverFactory');
 var spiderGroupListInfo = require('../funcs/group-list');
@@ -40,7 +33,6 @@ function WcBot(id){
     this.baseUrl = "";
     this.j = request.jar();
 }
-var util = require('util');
 util.inherits(WcBot, EventEmitter);
 /**
  * Launch the chrome client and get ready to polling
@@ -207,17 +199,6 @@ WcBot.prototype.onAddContact = function(handler){
 };
 
 /**
- * Add a contact actively
- * @param id
- * @param encodeId
- * @param callback
- */
-WcBot.prototype.addContact = function(id, encodeId, callback){
-    var self = this;
-    self.taskQueue.enqueue(_addContact.bind(self), {args:[id, encodeId], priority: 1, context: self}, callback);
-};
-
-/**
  * Attach a listener to a disconnect event
  * @param handler
  */
@@ -269,15 +250,6 @@ WcBot.prototype._polling = function(){
             return self.taskQueue.enqueue(self._walkChatList.bind(self), null, polling);
         }, settings.pollingGap);
     }
-};
-
-/**
- * listen the current user whether a message came in
- * @private
- */
-WcBot.prototype._listenCurrUser = function(){
-    var self = this;
-    currInteral = setInterval(self._walkCurrList.bind(self), 200);
 };
 
 /**
@@ -343,16 +315,6 @@ WcBot.prototype._login = function(callback){
 };
 
 /**
- * reply a message to the current user
- * @param count
- * @private
- */
-WcBot.prototype._reply = function(count){
-    this.driver.findElement({'id':'editArea'}).sendKeys("这个一个检测机器人，主人正在睡觉，请勿打扰");
-    this.driver.findElement({css:'.btn_send'}).click();
-};
-
-/**
  * search the sender in contacts
  * @param callback
  * @returns {Promise}
@@ -414,59 +376,6 @@ WcBot.prototype._walkChatList = function(callback){
         .thenCatch(function(err){
             return callback(err);
         })
-};
-
-/**
- * walk in right chat area, check to whether messages arrived
- * @param unReadCount
- * @param callback
- * @private
- */
-WcBot.prototype._walkCurrList = function(unReadCount, callback){
-    if(!callback){
-        callback = unReadCount;
-        unReadCount = null;
-    }
-    var self = this;
-    //init chat cache
-    !chatCache[self.sendTo] && (chatCache[self.sendTo] = 0);
-    //cache update
-    unReadCount && (chatCache[self.sendTo] = (chatCache[self.sendTo] || 0) + unReadCount);
-    //walk dom
-    self.driver.findElement({'css': '#chatArea'})
-        .then(function(chatwrapper){
-            chatwrapper.findElements({'css': '.bubble_default'}).then(function(collection){
-                var currCount = collection.length,
-                    readedCount = chatCache[self.sendTo];
-                if(!unReadCount){
-                    if(readedCount === currCount){
-                        return callback();
-                    }
-                    unReadCount = currCount - readedCount;
-                    chatCache[self.sendTo] = currCount;
-                }
-                var unreadArr = collection.slice(-unReadCount);
-                if(unreadArr.length === 0) return callback();
-                unreadArr.map(function(item){
-                    item.findElement({'css': 'pre.js_message_plain'}).then(function(preEl){
-                        preEl.getText().then(function(payLoad){
-                            replayMsg(self, null, callback);
-                        })
-                    })
-                })
-            })
-        })
-        .thenCatch(function(){
-            return callback();
-        })
-};
-
-/**
- * analysis the payload in message
- * @private
- */
-WcBot.prototype._analysisPayload =function(){
-    //TODO
 };
 
 /**
@@ -556,62 +465,6 @@ function needLogin(wcBot, callback){
     })
 }
 
-function _addContact(id, encodeId, callback){
-    var self = this;
-    var nickname = id;
-    var code = encodeId;
-    _findOneInListAsync(self, '朋友推荐消息')
-        .then(function(){
-            return _findOneInChatAysnc(self, nickname)
-        })
-        .then(function(){
-            return _modifyRemarkAsync(self, code)
-        })
-        .then(function(){
-            callback(null);
-        })
-        .thenCatch(function(err){
-            console.log('error occur ---- ' + err);
-            callback(err)
-        })
-}
-
-function _findOneInListAsync(self, id){
-    return self.driver.findElements({'css': 'div[ng-repeat*="chatContact"]'})
-        .then(function(collection) {
-            collection.map(function(item){
-                item.findElement({'css': 'div.chat_item >div.info >h3 >span'})
-                    .then(function(span){
-                        return span.getText();
-                    })
-                    .then(function(txt){
-                        if(txt === id){
-                            return item.click();
-                        }
-                    })
-                    .thenCatch(function(err){
-                        console.log(err)
-                    })
-            })
-        })
-}
-
-function _findOneInChatAysnc(self, id){
-    return self.driver.findElement({'css': '#chatArea div.card>div.card_bd>div.info>h3'})
-        .then(function(item){
-            item.getText()
-                .then(function(txt){
-                    !id && item.click();
-                    if(id && txt === id){
-                        return item.click()
-                    }
-                })
-        })
-        .thenCatch(function(e){
-            console.log('Failed to findOne in chat[code]-----' + JSON.stringify(e))
-        })
-}
-
 function pollingDispatcher(self,input){
     var handlers = {
         '朋友推荐消息': suggestFriendHandler,
@@ -622,11 +475,6 @@ function pollingDispatcher(self,input){
         })(input)
     };
     return handlers[input] || handlers['defaultHandler'];
-}
-
-function replayMsg(self, count){
-    //self._walkCurrList(count, callback);
-    self._reply(count);
 }
 
 module.exports = WcBot;
