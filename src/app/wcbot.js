@@ -253,6 +253,7 @@ WcBot.prototype._polling = function(){
             //pre task, check the client disconnected or not
             if(getCount()%3 === 0){
                 return self.taskQueue.enqueue(self._LoginOrNot.bind(self), null, function(err, data){
+                    console.log("*******validate login or not*********");
                     if(err){
                         //client is disconnected, close the driver and start again
                         self.stop().then(function(){
@@ -328,11 +329,13 @@ WcBot.prototype._login = function(callback){
                         }
                     })
                     .thenCatch(function(e){
+                        console.error("[system]: Failed to wait for login");
                         console.error(e);
                     })
             }, 2000);
         })
         .thenCatch(function(e){
+            console.error("[system]: Failed to login");
             console.error(e);
             callback(e, null);
         });
@@ -480,9 +483,12 @@ WcBot.prototype._LoginOrNot = function(callback){
         .then(function(txt){
             if(txt != '' && self.loggedIn){
                 return callback(null, null);
+            } else {
+                return webdriver.promise.rejected(new webdriver.error.Error(801, 'no_result'))
             }
         })
         .thenCatch(function(e){
+            console.error(e);
             callback(e, null);
         });
 };
@@ -515,7 +521,6 @@ function getLoginQr(wcBot, callback){
                         }
                         try{
                             var json = JSON.parse(body);
-
                         }catch(e){
                             return callback(json.err, null);
                         }

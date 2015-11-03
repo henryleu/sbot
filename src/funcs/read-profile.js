@@ -27,6 +27,11 @@ function _readProfile(bid, self, callback){
                     .then(function(clickbtn1){
                         return clickbtn1.click()
                     })
+                    .thenCatch(function(e){
+                        console.error('[flow]: Failed to click #chatArea>.box_hd');
+                        console.error(e);
+                        throw e;
+                    })
             })
             .then(function(){
                 return self.driver.wait(webdriver.until.elementLocated(webdriver.By.css('#chatRoomMembersWrap div.member:nth-child(2)>img')), 5000)
@@ -42,9 +47,10 @@ function _readProfile(bid, self, callback){
                                 return self.driver.sleep(2000);
                             })
                     })
-                    .thenCatch(function(err){
-                        console.log("err --------"+err);
-                        console.log(err.stack);
+                    .thenCatch(function(e){
+                        console.log("err --------");
+                        console.log(e.stack);
+                        throw e;
                     })
             })
             .then(function(){

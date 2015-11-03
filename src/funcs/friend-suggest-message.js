@@ -15,9 +15,13 @@ module.exports = function(self, item, parentItem, callback){
                     items.forEach(function(item){
                         promiseArr.push(addOneUserAsync(self, item));
                     });
-                    PromiseBB.all(promiseArr).then(function(arr){
-                        return arr;
-                    })
+                    PromiseBB.all(promiseArr)
+                        .then(function(arr){
+                            return arr;
+                        })
+                        .thenCatch(function(e){
+                            throw e;
+                        })
                 })
                 .then(function() {
                     return self.driver.sleep(1000)
@@ -29,10 +33,15 @@ module.exports = function(self, item, parentItem, callback){
                     return reset(self, callback);
                 })
                 .thenCatch(function(err){
-                    console.log("Failed to add contact----");
-                    console.log(err);
-                    callback();
+                    console.error("Failed to add contact----");
+                    console.error(err);
+                    callback(err);
                 })
+        })
+        .thenCatch(function(err){
+            console.error('[flow]: Failed to handler a recommend');
+            console.error(err);
+            callback(err);
         });
     function addOneUserAsync(self, item){
         return item.click()
@@ -40,10 +49,14 @@ module.exports = function(self, item, parentItem, callback){
                 return _modifyRemarkAsync(self, null, item);
             })
             .then(function(profile){
-                console.log("[flow]:the contact has been added, the profile is****");
-                console.log(profile);
+                console.info("[flow]:the contact has been added, the profile is****");
+                console.info(profile);
                 self.emit('contactAdded', {err: null, data: {botid: self.id, bid: profile.code, nickname: profile.nickName}});
-
+            })
+            .thenCatch(function(e){
+                console.error('[flow]: error occur - add one user');
+                console.error(e);
+                throw e;
             })
     }
     function clearPanelAsync(){
@@ -74,6 +87,7 @@ module.exports = function(self, item, parentItem, callback){
             .thenCatch(function(e){
                 console.error("Failed to clear the panel after add a contact");
                 console.error(e);
+                throw e;
             })
     }
 };
@@ -84,6 +98,8 @@ function _findElementsInChatAysnc(self){
             return items
         })
         .thenCatch(function(e){
-            console.log('Failed to findOne in chat[code]-----' + JSON.stringify(e))
+            console.error('[flow]: Failed to findOne in chat[code]-----' + JSON.stringify(e));
+            console.error(e);
+            throw e;
         })
 }

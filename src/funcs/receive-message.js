@@ -20,11 +20,13 @@ module.exports = function(self, item, parentItem, callback){
                 })
                 .thenCatch(function(e){
                     console.error(e);
+                    throw e;
                 })
         })
-        .thenCatch(function(err){
-            console.log("[flow]: Failed to receive msg")
-            console.log(err);
+        .thenCatch(function(e){
+            console.error("[flow]: Failed to receive msg");
+            console.error(e);
+            callback(e);
         })
 };
 function spiderContent(self, unReadCount, callback){
@@ -39,16 +41,20 @@ function spiderContent(self, unReadCount, callback){
             unreadArr.forEach(function(item){
                 PromiseArr.push(_getContentAsync(self, item));
             });
-            return PromiseBB.all(PromiseArr).then(function(arr){
-                return arr;
-            })
+            return PromiseBB.all(PromiseArr)
+                .then(function(arr){
+                    return arr;
+                })
+                .thenCatch(function(e){
+                    throw e;
+                })
         })
         .then(function(msgArr){
             return callback(null, msgArr);
         })
         .thenCatch(function(e){
-            console.log("[flow]: Failed to receive msg");
-            console.log(e);
+            console.error("[flow]: Failed to receive msg");
+            console.error(e);
             return callback(e);
         });
     var _getContentAsync = PromiseBB.promisify(_getContent);
@@ -62,7 +68,7 @@ function spiderContent(self, unReadCount, callback){
                 CreateTime: parseInt(new Date().getTime(), 10).toString()
             };
         }catch(e){
-            console.log(e)
+            callback(e);
         }
         promise.findElement({'css': '.bubble_cont >div'})
             .then(function(item){
