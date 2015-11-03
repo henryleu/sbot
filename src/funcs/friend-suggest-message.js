@@ -19,7 +19,7 @@ module.exports = function(self, item, parentItem, callback){
                         .then(function(arr){
                             return arr;
                         })
-                        .thenCatch(function(e){
+                        .catch(Error, function(e){
                             throw e;
                         })
                 })

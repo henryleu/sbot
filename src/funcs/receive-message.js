@@ -43,9 +43,12 @@ function spiderContent(self, unReadCount, callback){
             });
             return PromiseBB.all(PromiseArr)
                 .then(function(arr){
-                    return arr;
+                    var newArr = arr.filter(function(item){
+                        return item != null
+                    });
+                    return newArr;
                 })
-                .thenCatch(function(e){
+                .catch(Error, function(e){
                     throw e;
                 })
         })
@@ -108,7 +111,7 @@ function spiderContent(self, unReadCount, callback){
                             return callback(e, null)
                         })
                 }
-                if(className === 'picture'){
+                else if(className === 'picture'){
                     console.info("[flow]: type is image");
                     return currNode.findElement({'css': '.msg-img'})
                         .then(function(img){
@@ -133,23 +136,27 @@ function spiderContent(self, unReadCount, callback){
                             callback(e, null)
                         })
                 }
-                if(className === 'voice'){
+                else if(className === 'voice'){
                     console.info("[flow]: type is voice");
-                    return promise.getAttribute('data-cm').then(function(attr){
-                        var obj = JSON.parse(attr);
-                        getMediaFile(self.baseUrl + 'cgi-bin/mmwebwx-bin/webwxgetvoice?msgid=' + obj.msgId, 'mp3', function(err, res){
-                            if(err){
-                                return callback(err, null)
-                            }
-                            msg['MediaId'] = res['wx_media_id'];
-                            msg['FsMediaId'] = res['media_id'];
-                            msg['MsgType'] = 'voice';
-                            callback(null, msg);
-                        });
-                    })
+                    return promise.getAttribute('data-cm')
+                        .then(function(attr){
+                            var obj = JSON.parse(attr);
+                            getMediaFile(self.baseUrl + 'cgi-bin/mmwebwx-bin/webwxgetvoice?msgid=' + obj.msgId, 'mp3', function(err, res){
+                                if(err){
+                                    return callback(err, null)
+                                }
+                                msg['MediaId'] = res['wx_media_id'];
+                                msg['FsMediaId'] = res['media_id'];
+                                msg['MsgType'] = 'voice';
+                                callback(null, msg);
+                            });
+                        })
                         .thenCatch(function(e){
                             callback(e, null)
                         })
+                }
+                else{
+                    callback(null, null);
                 }
             })
             .thenCatch(function(e){
