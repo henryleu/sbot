@@ -72,8 +72,9 @@ WcBot.prototype.stop = function(){
             return self.driver.sleep(3000);
         })
         .thenCatch(function(e){
-            console.log('failed to stop bot');
-            console.log(e)
+            console.log('[system]: Failed to stop bot');
+            console.log(e);
+            self.stop();
         })
 };
 
@@ -422,6 +423,7 @@ function getLoginQr(wcBot, callback){
                             }
                         }
                     };
+                    console.log('[flow]: file system server,s url is ' + fsServer);
                     request.post({url: fsServer, formData: formData}, function(err, res, body) {
                         if(err){
                             console.error('[system]: Failed to upload qr img when client disconnect');

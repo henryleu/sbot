@@ -185,6 +185,7 @@ function spiderContent(self, unReadCount, callback){
                 try{
                     var json = JSON.parse(body);
                 }catch(e){
+                    console.error("[flow]: -receive message - Failed to parse json from file server");
                     return callback(e);
                 }
                 if(json.err){
