@@ -245,7 +245,7 @@ WcBot.prototype._polling = function(){
         });
     }
     function polling(){
-        if(getCount()%10 === 0){
+        if(getCount()%settings.pollingPrintGap === 0){
             console.info("[system]: the application continue to poll");
         }
         if(!self.loggedIn){
@@ -253,9 +253,8 @@ WcBot.prototype._polling = function(){
         }
         setTimeout(function(){
             //pre task, check the client disconnected or not
-            if(getCount()%3 === 0){
+            if(getCount()%settings.pollingLoginOrNotGap === 0){
                 return self.taskQueue.enqueue(self._LoginOrNot.bind(self), null, function(err, data){
-                    console.log("*******validate login or not*********");
                     if(err){
                         //client is disconnected, close the driver and start again
                         self.stop().then(function(){
@@ -263,15 +262,12 @@ WcBot.prototype._polling = function(){
                         });
                     } else {
                         //connection is ok, check whether msgs are arrived
-                        return self.taskQueue.enqueue(self._walkChatList.bind(self), null, function(err){
-                            console.log(err);
-                            polling();
-                        });
+                        return self.taskQueue.enqueue(self._walkChatList.bind(self), null, polling);
                     }
                 });
             }
             return self.taskQueue.enqueue(self._walkChatList.bind(self), null, polling);
-        }, 3000);
+        }, settings.pollingGap);
     }
 };
 
@@ -407,7 +403,6 @@ WcBot.prototype._walkChatList = function(callback){
                             if(index <= (len-1)){
                                 return iterator(index)
                             }
-                            console.info("[transaction]: -walk In dom - nothing income");
                             return callback(null, null);
                         }
                         console.error(e);

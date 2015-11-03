@@ -11,9 +11,15 @@ var redis = {
 var reconnectTime = 12*60*60*1000;
 var fsUrl = 'http://ci.www.wenode.org/api/file/upload';
 var wxIndexUrl = 'http://wx.qq.com';
+var pollingGap = 1000;
+var pollingPrintGap = 10;
+var pollingLoginOrNotGap = 3;
 module.exports = {
     redis: redis,
     reconnectTime: reconnectTime,
     fsUrl: fsUrl,
-    wxIndexUrl: wxIndexUrl
+    wxIndexUrl: wxIndexUrl,
+    pollingGap: pollingGap,
+    pollingPrintGap: pollingPrintGap,
+    pollingLoginOrNotGap: pollingLoginOrNotGap
 };
