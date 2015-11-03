@@ -431,7 +431,9 @@ function getLoginQr(wcBot, callback){
                         try{
                             var json = JSON.parse(body);
                         }catch(e){
-                            return callback(json.err, null);
+                            console.error("[system]: JSON parse error");
+                            console.error(body);
+                            return callback(e, null);
                         }
                         if(json.err){
                             return callback(json.err, null);
