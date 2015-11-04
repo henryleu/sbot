@@ -11,6 +11,7 @@ var util = require('util');
 //funcs
 var createDriver = require('../webdriver/webdriverFactory');
 var spiderGroupListInfo = require('../funcs/group-list');
+var spiderContactListInfo = require('../funcs/contact-list');
 var receiveReset = require('../funcs/reset-pointer');
 var _findOnePro = require('../funcs/find-one-contract');
 var _readProfile = require('../funcs/read-profile');
@@ -53,6 +54,26 @@ WcBot.prototype.start = function(){
 };
 
 /**
+ *
+ * @returns {!goog.Promise|!promise.Promise.<R>|*}
+ */
+WcBot.prototype.restart = function(){
+    var self = this;
+    return self.driver.close()
+        .then(function(){
+            return self.init(self);
+        })
+        .thenCatch(function(e){
+            console.error('[system]: Failed to stop bot');
+            console.error(e);
+            return self.init(self);
+        })
+        .then(function(){
+            return self.start();
+        })
+};
+
+/**
  * Close the browser and reset bot,s data
  * @return Promise
  */
@@ -60,22 +81,35 @@ WcBot.prototype.stop = function(){
     var self = this;
     return self.driver.close()
         .then(function(){
-            self.sendTo = null;
-            self.driver = createDriver();
-            self.taskQueue = new TaskQueue(1);
-            self.loggedIn = false;
-            clearInterval(self.callCsToLogin);
-            clearInterval(self.waitForLogin);
-            self.callCsToLogin = null;
-            self.waitForLogin = null;
-            self.emit('abort', {err: null, data: {botid: self.id}});
-            return self.driver.sleep(3000);
+            return self.init(self);
         })
         .thenCatch(function(e){
-            console.log('[system]: Failed to stop bot');
-            console.log(e);
-            self.stop();
+            console.error('[system]: Failed to stop bot');
+            console.error(e);
+            return self.init(self);
         })
+};
+
+/**
+ * init wcBot
+ * @param json
+ * @param callback
+ */
+WcBot.prototype.init = function(bot) {
+    bot.sendTo = null;
+    bot.driver = createDriver();
+    bot.taskQueue = new TaskQueue(1);
+    bot.loggedIn = false;
+    if(bot.callCsToLogin){
+        bot.callCsToLogin = null;
+        clearInterval(bot.callCsToLogin);
+    }
+    if(bot.waitForLogin){
+        clearInterval(bot.waitForLogin);
+        bot.waitForLogin = null;
+    }
+    bot.emit('abort', {err: null, data: {botid: self.id}});
+    return bot.driver.sleep(3000);
 };
 
 /**
@@ -133,9 +167,19 @@ WcBot.prototype.readProfile = function(bid, callback){
  * @param bid (string=)
  * @param callback
  */
-WcBot.prototype.groupList = function(bid, callback){
+WcBot.prototype.groupList = function(callback){
     var self = this;
     self.taskQueue.enqueue(spiderGroupListInfo, {args:[self]}, callback);
+};
+
+/**
+ * spider the contact,s info(nickname and headimgurl)
+ * @param bid (string=)
+ * @param callback
+ */
+WcBot.prototype.contactList = function(callback){
+    var self = this;
+    self.taskQueue.enqueue(spiderContactListInfo, {args:[self]}, callback);
 };
 
 /**
@@ -284,7 +328,7 @@ WcBot.prototype._login = function(callback){
                     }
                     return;
                 });
-            }, 15*60*1000);
+            }, settings.callCsToLoginGap);
             self.waitForLogin = setInterval(function(){
                 self.driver.findElement({css: '.nickname span'})
                     .then(function(span){
@@ -306,7 +350,7 @@ WcBot.prototype._login = function(callback){
                             self.start();
                         });
                     })
-            }, 2000);
+            }, settings.waitForLoginGap);
         })
         .thenCatch(function(e){
             console.error("[system]: Failed to login");

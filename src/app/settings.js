@@ -12,11 +12,17 @@ var pollingPrintGap = 10;
 
 var pollingLoginOrNotGap = 3;
 
+var callCsToLoginGap = 5*60*1000;
+
+var waitForLoginGap = 2000;
+
 module.exports = {
     reconnectTime: reconnectTime,
     fsUrl: fsUrl,
     wxIndexUrl: wxIndexUrl,
     pollingGap: pollingGap,
     pollingPrintGap: pollingPrintGap,
-    pollingLoginOrNotGap: pollingLoginOrNotGap
+    pollingLoginOrNotGap: pollingLoginOrNotGap,
+    callCsToLoginGap: callCsToLoginGap,
+    waitForLoginGap: waitForLoginGap
 };

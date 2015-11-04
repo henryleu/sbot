@@ -11,7 +11,8 @@ var channelMap = {
     'sbot:stop': stopHandler,
     'sbot:message-send': sendHandler,
     'sbot:profile-request': readProfileHandler,
-    'sbot:group-list-request': groupListHandler
+    'sbot:group-list-request': groupListHandler,
+    'sbot:contact-list-request': contactListHandler
 };
 
 //subscribe channel start, send and channel readProfile
@@ -20,6 +21,7 @@ pubSubService.subClient.subscribe('sbot:stop');
 pubSubService.subClient.subscribe('sbot:message-send');
 pubSubService.subClient.subscribe('sbot:profile-request');
 pubSubService.subClient.subscribe('sbot:group-list-request');
+pubSubService.subClient.subscribe('sbot:contact-list-request');
 
 //listen message event from athena
 pubSubService.subClient.on('message', function(channel, message){
@@ -125,6 +127,27 @@ function readProfileHandler(channel, msg){
     });
 }
 
+function contactListHandler(channel, msg){
+    console.info("handing the contact list request...");
+    var service = botManagar.getBotById(msg.botid);
+    if(!service){
+        console.warn('has no such bot[botid] = ' + msg.botid);
+        return;
+    }
+    if(!service.loggedIn){
+        console.warn('the bot[botid] = ' + msg.botid + ' haven,t login');
+        return;
+    }
+    service.contactList(function(err, data){
+        if(err) {
+            return console.log('failed to contact list error occur------' + JSON.stringify(err));
+        }
+        console.log("succeed to get contact list info");
+        console.log(data);
+        pubSubService.pubClient.publish('sbot:contact-list', JSON.stringify({err: err, data: data}));
+    });
+}
+
 function groupListHandler(channel, msg){
     console.info("handing the group list request...");
     var service = botManagar.getBotById(msg.botid);
@@ -136,7 +159,7 @@ function groupListHandler(channel, msg){
         console.warn('the bot[botid] = ' + msg.botid + ' haven,t login');
         return;
     }
-    service.groupList(msg.botid, function(err, data){
+    service.groupList(function(err, data){
         if(err) {
             return console.log('failed to group list error occur------' + JSON.stringify(err));
         }
