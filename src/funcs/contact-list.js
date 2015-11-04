@@ -153,7 +153,7 @@ function uploadImgAsync(self, src){
             file: {
                 value: request({url: self.baseUrl + src, jar: self.j, encoding: null}),
                 options: {
-                    filename: 'xxx.jpg'
+                    filename: 'yyy.jpg'
                 }
             }
         };

@@ -108,7 +108,7 @@ WcBot.prototype.init = function(bot) {
         clearInterval(bot.waitForLogin);
         bot.waitForLogin = null;
     }
-    bot.emit('abort', {err: null, data: {botid: self.id}});
+    bot.emit('abort', {err: null, data: {botid: bot.id}});
     return bot.driver.sleep(3000);
 };
 
