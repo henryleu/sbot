@@ -51,7 +51,7 @@ module.exports = function(self, callback){
                             return spiderContactList(self,contactArr).then(function (arr) {
                                 receiveCount += receiveCount;
                                 var newArr = arr.filter(function(item){
-                                    return item.nickname != null;
+                                    return item != null;
                                 });
                                 contactArr = contactArr.concat(newArr);
                                 if(newArr.length === 0){
@@ -94,16 +94,14 @@ function spiderContactList(self, contactArr){
             return webdriver.promise.map(collection, function (item, index, arr) {
                 var contact = item;
                 var username = "";
-                var headimgUrl = "";
+                var imgsrc = null;
+                var nickname = null;
                 return contact.findElement({css: '.avatar img'})
                     .then(function (imgEl) {
                         return imgEl.getAttribute('mm-src')
                             .then(function (src) {
+                                imgsrc = src;
                                 username = qs.parse(urlCore.parse(src).query).username;
-                                return uploadImgAsync(self, src)
-                            })
-                            .then(function(media_id){
-                                headimgUrl = media_id;
                                 if (hasUserName(contactArr, username)) {
                                     return null
                                 } else {
@@ -116,12 +114,22 @@ function spiderContactList(self, contactArr){
                                 }
                                 return null;
                             })
-                            .then(function (nickname) {
-                                return {
-                                    headimgUrl: headimgUrl,
-                                    username: username,
-                                    nickname: nickname
-                                };
+                            .then(function(txt){
+                                if(txt){
+                                    nickname = txt;
+                                    return uploadImgAsync(self, imgsrc)
+                                }
+                                return null;
+                            })
+                            .then(function (media_id) {
+                                if(media_id){
+                                    return {
+                                        headimgUrl: media_id,
+                                        username: username,
+                                        nickname: nickname
+                                    };
+                                }
+                                return null;
                             })
                     })
                     .thenCatch(function (e) {
