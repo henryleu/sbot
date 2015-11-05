@@ -395,7 +395,7 @@ WcBot.prototype._walkChatList = function(callback){
                             })
                             .then(function(txt){
                                 console.info("[transaction] -receive : a new message received");
-                                console.log("[flow]: the title is " + txt);
+                                console.info("[flow]: the title is " + txt);
                                 return pollingDispatcher(self, txt)(self, iblockTemp, item, callback);
                             })
                             .thenCatch(function(e){
@@ -449,16 +449,16 @@ WcBot.prototype._LoginOrNot = function(callback){
 
 function getLoginQr(wcBot, callback){
     var self = wcBot;
-    console.log("enter git login qr");
+    console.info("[flow]: enter git login qr");
     waitFor(self.driver, {css: '.qrcode img'}, 50000)
         .then(function(){
-            console.log("wait ok qr img node ready");
+            console.info("[flow]: wait ok qr img node ready");
             return self.driver.findElement({css: '.qrcode img'});
         })
         .then(function(img){
             img.getAttribute('src')
                 .then(function(src){
-                    console.log(src)
+                    console.info("[flow]: src is " + src);
                     var formData = {
                         file: {
                             value: request({url: src, jar: self.j, encoding: null}),
@@ -467,7 +467,7 @@ function getLoginQr(wcBot, callback){
                             }
                         }
                     };
-                    console.log('[flow]: file system server,s url is ' + fsServer);
+                    console.info('[flow]: file system server,s url is ' + fsServer);
                     request.post({url: fsServer, formData: formData}, function(err, res, body) {
                         if(err){
                             console.error('[system]: Failed to upload qr img when client disconnect');
@@ -502,11 +502,10 @@ function needLogin(wcBot, callback){
     var self = wcBot;
     getLoginQr(self, function(err, data){
         if(err){
-            console.error('Failed to get Qrcode that used to login');
+            console.error('[flow]: Failed to get Qrcode that used to login');
             callback(err, null);
         }else{
-            console.log("-------------");
-            console.log("get login qrcode successful the media_id is [ " + data.media_id + " ]");
+            console.info("[flow]: get login qrcode successful the media_id is [ " + data.media_id + " ]");
             self.emit('needLogin', {err: null, data:{wx_media_id: data.wx_media_id, media_id: data.media_id, botid: self.id}});
             return callback(null, null);
         }

@@ -21,9 +21,9 @@ module.exports = function buildProxy(webdriver, source, options){
                                 resolve(result);
                                 cb();
                             })
-                                .thenCatch(function(e){
-                                    reject(e);
-                                })
+                            .thenCatch(function(e){
+                                reject(e);
+                            })
                         }
                     )
                 });
