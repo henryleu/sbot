@@ -14,6 +14,7 @@ module.exports = function(self, callback){
     console.info("[transaction]: begin to read contact list");
     var driver = self.driver;
     var contactArr = [];
+    var startTime = null;
     driver.call(function(){
         driver.findElement({'css': '.web_wechat_add'}).click();
         driver.wait(webdriver.until.elementLocated(webdriver.By.css('#mmpop_system_menu')) , 20000);
@@ -21,35 +22,40 @@ module.exports = function(self, callback){
             .then(function(collection){
                 return collection[0].findElement({css: 'a'}).click()
             });
-        driver.sleep(500);
-        //driver.wait(webdriver.until.elementLocated(webdriver.By.css('.ngdialog-content')), 20000);
+        driver.wait(webdriver.until.elementLocated(webdriver.By.css('.ngdialog-content')), 20000);
         driver.call(function(){
+            startTime = (new Date()).getTime();
             var receiveCount = 0;
+            var baseCount = 0;
             return spiderContactList(self, contactArr).then(function (arr) {
                 if(!arr.length){
                     return callback(null,[]);
                 }
-                receiveCount = arr.length;
+                baseCount = receiveCount = arr.length;
                 contactArr = contactArr.concat(arr);
                 return iterator(new webdriver.promise.fulfilled());
             });
             function iterator(promise){
                 return promise.then(function(){
-                    return driver.executeScript(function(receiveCount) {
-                        var $myContactScrollbar = $myContactScrollbar || $('#createChatRoomContainer >div:nth-child(3) div[jquery-scrollbar]');
+                    return driver.executeScript(function(receiveCountContact) {
+                        var $myContactScrollbar = $('#createChatRoomContainer >div:nth-child(2) div[jquery-scrollbar]');
                         var startPosContact = parseInt($myContactScrollbar.scrollTop(), 10);
-                        var expectHeight = receiveCount * 50;
-                        $myContactScrollbar.scrollTop(expectHeight);
-                        var endPosContact = $myContactScrollbar.scrollTop();
+                        var expectHeightContact = receiveCountContact * 55;
+                        $myContactScrollbar.scrollTop(expectHeightContact);
+                        var endPosContact = parseInt($myContactScrollbar.scrollTop(), 10);
                         var moveHeightContact = parseInt(endPosContact-startPosContact, 10);
-                        return {done: moveHeightContact === 0, actualCount: Math.floor(parseInt(endPosContact-startPosContact, 10)/50)};
+                        return {
+                            moveHeightContact : moveHeightContact,
+                            done: moveHeightContact === 0,
+                            actualCount: Math.floor(parseInt(endPosContact-startPosContact, 10)/55)
+                        };
                     }, receiveCount)
                         .then(function (data) {
                             if(data.done){
                                 return contactArr;
                             }
                             return spiderContactList(self,contactArr).then(function (arr) {
-                                receiveCount += receiveCount;
+                                receiveCount += baseCount;
                                 var newArr = arr.filter(function(item){
                                     return item != null;
                                 });
@@ -64,6 +70,7 @@ module.exports = function(self, callback){
                 })
             }
         }).then(function(arr){
+            console.log("[flow]: Succeed to get contact list info that length is [" + contactArr.length + "]");
             driver.findElement(closeLocator)
                 .then(function(item){
                     return item.click();
@@ -98,7 +105,7 @@ function spiderContactList(self, contactArr){
                 var nickname = null;
                 return contact.findElement({css: '.avatar img'})
                     .then(function (imgEl) {
-                        return imgEl.getAttribute('mm-src')
+                        return imgEl.getAttribute('src')
                             .then(function (src) {
                                 imgsrc = src;
                                 username = qs.parse(urlCore.parse(src).query).username;
@@ -121,10 +128,10 @@ function spiderContactList(self, contactArr){
                                 }
                                 return null;
                             })
-                            .then(function (media_id) {
-                                if(media_id){
+                            .then(function (json) {
+                                if(json){
                                     return {
-                                        headimgUrl: media_id,
+                                        headimgUrl: json.media_id,
                                         username: username,
                                         nickname: nickname
                                     };
@@ -149,7 +156,7 @@ function spiderContactList(self, contactArr){
 function hasUserName(arr, key) {
     var self = arr;
     for(var i=0, len=self.length; i<len; i++){
-        if(self[i].nickname === key){
+        if(self[i].username === key){
             return true;
         }
     }
@@ -159,14 +166,15 @@ function uploadImgAsync(self, src){
     return new webdriver.promise.Promise(function(resolve, reject){
         var formData = {
             file: {
-                value: request({url: self.baseUrl + src, jar: self.j, encoding: null}),
+                value: request({url: src, jar: self.j, encoding: null}),
                 options: {
-                    filename: 'yyy.jpg'
+                    filename: 'yyy.jpeg'
                 }
             }
         };
         request.post({url:fsServer, formData: formData}, function(err, res, body) {
             if (err) {
+                console.error('[flow]: Failed to upload headimg to FsServer-0');
                 return reject(err);
             }
             try{
@@ -176,6 +184,7 @@ function uploadImgAsync(self, src){
                 return reject(e);
             }
             if(json.err){
+                console.error('[flow]: Failed to upload headimg to FsServer-1');
                 return reject(json.err);
             }
             resolve(json);

@@ -19,19 +19,19 @@ module.exports = function(self, callback){
             .then(function(collection){
                 return collection[0].findElement({css: 'a'}).click()
             });
-        driver.sleep(500);
-        //driver.wait(webdriver.until.elementLocated(webdriver.By.css('.ngdialog-content')), 20000);
+        driver.wait(webdriver.until.elementLocated(webdriver.By.css('.ngdialog-content')), 20000);
         driver.findElement({css: '#createChatRoomContainer ul li:nth-child(2)'})
             .then(function(liNode){
                 return liNode.click()
             });
         driver.call(function(){
             var receiveCount = 0;
+            var baseCount = 0;
             return spiderGroupList(driver, groupNameArr).then(function (arr) {
                 if(!arr.length){
                     return callback(null,[]);
                 }
-                receiveCount = arr.length;
+                receiveCount = baseCount = arr.length;
                 groupNameArr = groupNameArr.concat(arr);
                 return iterator(new webdriver.promise.fulfilled());
             });
@@ -52,7 +52,7 @@ module.exports = function(self, callback){
                             }
                             return spiderGroupList(driver,groupNameArr)
                                 .then(function (arr) {
-                                    receiveCount += receiveCount;
+                                    receiveCount += baseCount;
                                     var newArr = arr.filter(function(item){
                                         return item.name != null;
                                     });
