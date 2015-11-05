@@ -12,7 +12,7 @@ var channelMap = {
     'sbot:message-send': sendHandler,
     'sbot:profile-request': readProfileHandler,
     'sbot:group-list-request': groupListHandler,
-    'sbot:contact-list-request': contactListHandler
+    'sbot:contact-list-remark-request': contactListRemarkHandler
 };
 
 //subscribe channel start, send and channel readProfile
@@ -21,7 +21,7 @@ pubSubService.subClient.subscribe('sbot:stop');
 pubSubService.subClient.subscribe('sbot:message-send');
 pubSubService.subClient.subscribe('sbot:profile-request');
 pubSubService.subClient.subscribe('sbot:group-list-request');
-pubSubService.subClient.subscribe('sbot:contact-list-request');
+pubSubService.subClient.subscribe('sbot:contact-list-remark-request');
 
 //listen message event from athena
 pubSubService.subClient.on('message', function(channel, message){
@@ -71,6 +71,11 @@ function startHandler(channel, msg){
         console.log(data);
         if(err) return console.log(err);
         pubSubService.pubClient.publish('sbot:abort', JSON.stringify({err: err, data: data}));
+    });
+    service.onRemarkContact(function(err, data){
+        console.log(data);
+        if(err) return console.log(err);
+        pubSubService.pubClient.publish('sbot:contact-remarked', JSON.stringify({err: err, data: data}));
     });
     botManagar.setBot(service);
     service.start();
@@ -127,7 +132,7 @@ function readProfileHandler(channel, msg){
     });
 }
 
-function contactListHandler(channel, msg){
+function contactListRemarkHandler(channel, msg){
     console.info("handing the contact list request...");
     var service = botManagar.getBotById(msg.botid);
     if(!service){
@@ -138,13 +143,11 @@ function contactListHandler(channel, msg){
         console.warn('the bot[botid] = ' + msg.botid + ' haven,t login');
         return;
     }
-    service.contactList(function(err, data){
+    service.contactListRemark(function(err, data){
         if(err) {
             return console.log('failed to contact list error occur------' + JSON.stringify(err));
         }
-        console.log("succeed to get contact list info");
-        console.log(data);
-        pubSubService.pubClient.publish('sbot:contact-list', JSON.stringify({err: err, data: data}));
+        console.log("succeed to remark contact list");
     });
 }
 
