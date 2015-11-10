@@ -78,10 +78,7 @@ module.exports = function(self, callback){
             driver.sleep(500);
             driver.call(function(){
                 reset(self, function(){
-                    callback(null, {
-                        botid: self.id,
-                        list: contactArr
-                    });
+                    callback(null, contactArr);
                 });
             });
         })
@@ -101,13 +98,11 @@ function spiderContactList(self, contactArr){
             return webdriver.promise.map(collection, function (item, index, arr) {
                 var contact = item;
                 var username = "";
-                var imgsrc = null;
                 var nickname = null;
                 return contact.findElement({css: '.avatar img'})
                     .then(function (imgEl) {
                         return imgEl.getAttribute('src')
                             .then(function (src) {
-                                imgsrc = src;
                                 username = qs.parse(urlCore.parse(src).query).username;
                                 if (hasUserName(contactArr, username)) {
                                     return null
@@ -121,19 +116,11 @@ function spiderContactList(self, contactArr){
                                 }
                                 return null;
                             })
-                            .then(function(txt){
-                                if(txt){
-                                    nickname = txt;
-                                    return uploadImgAsync(self, imgsrc)
-                                }
-                                return null;
-                            })
-                            .then(function (json) {
-                                if(json){
+                            .then(function (nickname) {
+                                if(nickname){
                                     return {
-                                        headimgUrl: json.media_id,
-                                        username: username,
-                                        nickname: nickname
+                                        nickname: nickname,
+                                        username: username
                                     };
                                 }
                                 return null;

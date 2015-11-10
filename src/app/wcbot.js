@@ -14,7 +14,8 @@ var spiderGroupListInfo = require('../funcs/group-list');
 var spiderContactListInfo = require('../funcs/contact-list');
 var receiveReset = require('../funcs/reset-pointer');
 var _findOnePro = require('../funcs/find-one-contract');
-var _readProfile = require('../funcs/read-profile');
+var readProfile = require('../funcs/read-profile').readProfile;
+var completeProfileAsync = require('../funcs/profile-complete');
 var suggestFriendHandler = require('../funcs/friend-suggest-message');
 var _modifyRemarkAsync = require('../funcs/modify-user-remark');
 var receiveMessageHandler = require('../funcs/receive-message');
@@ -159,7 +160,7 @@ WcBot.prototype.send = function(json, callback) {
  */
 WcBot.prototype.readProfile = function(bid, callback){
     var self = this;
-    self.taskQueue.enqueue(_readProfile.bind(self),{args:[bid, self], priority: 1, context:self}, callback);
+    self.taskQueue.enqueue(readProfile.bind(self),{args:[bid, self], priority: 1, context:self}, callback);
 };
 
 /**
@@ -173,13 +174,46 @@ WcBot.prototype.groupList = function(callback){
 };
 
 /**
- * spider the contact,s info(nickname and headimgurl)
+ * spider the contact,s info(nickname and headimgid)
  * @param bid (string=)
  * @param callback
  */
-WcBot.prototype.contactList = function(callback){
+WcBot.prototype.contactListRemark = function(callback){
     var self = this;
-    self.taskQueue.enqueue(spiderContactListInfo, {args:[self]}, callback);
+    self.taskQueue.enqueue(function(cb){
+        var resultList = null;
+        spiderContactListInfo(self, function(e, list){
+            console.log("list length----------" + list.length);
+            resultList = list;
+            if(e){
+                return cb(e);
+            }
+            list.forEach(function(contact){
+                if(contact.nickname.substr(0, 3) != 'bu-'){
+                    self.taskQueue.enqueue(completeProfileAsync, {args:[self, contact.nickname]}, function(err, data){
+                        if(err){
+                            console.log("[flow]: Failed to remark contact");
+                            console.error(err);
+                        }else{
+                            self.emit('remarkcontact', {err: null, data: data})
+                        }
+                    });
+                }
+            });
+            receiveReset(self, cb);
+        })
+    }, callback);
+};
+
+/**
+ * Attach a remark contact listener on WcBot
+ * @param handler
+ */
+WcBot.prototype.onRemarkContact = function(handler){
+    var self = this;
+    self.removeAllListeners('remarkcontact').on('remarkcontact', function(data){
+        handler.call(self, data.err, data.data)
+    });
 };
 
 /**

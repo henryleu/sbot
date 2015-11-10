@@ -1,4 +1,5 @@
 var webdriver = require('selenium-webdriver');
+var PromiseBB = require('bluebird')
 //external services
 var reset = require('./reset-pointer');
 var _findOnePro = require('../funcs/find-one-contract');
@@ -9,9 +10,7 @@ var qs = require('querystring');
 var url = require('url');
 var request = require('request');
 
-module.exports = _readProfile;
-
-function _readProfile(bid, self, callback){
+function readProfile(bid, self, callback){
     console.info("[transaction]: begin to read profile of contact that bid is " + bid);
     var box;
     _findOnePro(self, bid, function(e){
@@ -54,7 +53,7 @@ function _readProfile(bid, self, callback){
                     })
             })
             .then(function(){
-                _readProfileChain(self, function(err, data){
+                readProfileChain(self, function(err, data){
                     if(err){
                         console.error('[flow]: Failed to read profile');
                         console.error(err);
@@ -73,7 +72,7 @@ function _readProfile(bid, self, callback){
     });
 }
 
-function _readProfileChain(self, callback){
+function readProfileChain(self, callback){
     var data = {},
         pop;
     self.driver.findElement({'css': 'div#mmpop_profile>div.profile_mini'})
@@ -88,6 +87,25 @@ function _readProfileChain(self, callback){
                     data.place = placetxt;
                     data.botid = self.id;
                     return;
+                })
+        })
+        .then(function(){
+            return pop.findElement({'css': 'div.profile_mini_bd>div.nickname_area i'})
+                .then(function(sexNode){
+                    return sexNode.getAttribute('class')
+                        .then(function(txt){
+                            var tmpSex = txt.split(' ')[1];
+                            if(tmpSex === 'web_wechat_men'){
+                                data.sex = 1;
+                            }
+                            else if(tmpSex === 'web_wechat_women'){
+                                data.sex = 2;
+                            }
+                            else{
+                                data.sex = 0;
+                            }
+                            console.info('[flow]: sex is ' + data.sex);
+                        })
                 })
         })
         .then(function(){
@@ -151,3 +169,5 @@ function _readProfileChain(self, callback){
             });
         })
 }
+
+exports.readProfile = readProfile;
