@@ -183,26 +183,25 @@ WcBot.prototype.contactListRemark = function(callback){
     self.taskQueue.enqueue(function(cb){
         var resultList = null;
         spiderContactListInfo(self, function(e, list){
-            console.log("list length----------" + list.length);
             resultList = list;
             if(e){
                 return cb(e);
             }
+            receiveReset(self, cb);
             list.forEach(function(contact){
                 if(contact.nickname.substr(0, 3) != 'bu-'){
                     self.taskQueue.enqueue(completeProfileAsync, {args:[self, contact.nickname]}, function(err, data){
                         if(err){
                             console.log("[flow]: Failed to remark contact");
-                            console.error(err);
+                            console.warn(err);
                         }else{
                             self.emit('remarkcontact', {err: null, data: data})
                         }
                     });
                 }
             });
-            receiveReset(self, cb);
         })
-    }, callback);
+    }, null, callback);
 };
 
 /**

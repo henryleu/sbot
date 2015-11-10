@@ -5,6 +5,7 @@ var reset = require('./reset-pointer');
 var request = require('request');
 var closeLocator = webdriver.By.css('div.ngdialog-close');
 var fsServer = require('../app/settings').fsUrl;
+var validateIsNormalStrOrNot = require('../util').validateIsNormalStrOrNot;
 /**
  * contact list info spider
  * @param driver
@@ -31,8 +32,11 @@ module.exports = function(self, callback){
                 if(!arr.length){
                     return callback(null,[]);
                 }
+                var newArr = arr.filter(function(item){
+                    return item != null;
+                });
                 baseCount = receiveCount = arr.length;
-                contactArr = contactArr.concat(arr);
+                contactArr = contactArr.concat(newArr);
                 return iterator(new webdriver.promise.fulfilled());
             });
             function iterator(promise){
@@ -71,6 +75,7 @@ module.exports = function(self, callback){
             }
         }).then(function(arr){
             console.log("[flow]: Succeed to get contact list info that length is [" + contactArr.length + "]");
+            console.warn(contactArr)
             driver.findElement(closeLocator)
                 .then(function(item){
                     return item.click();
@@ -104,7 +109,7 @@ function spiderContactList(self, contactArr){
                         return imgEl.getAttribute('src')
                             .then(function (src) {
                                 username = qs.parse(urlCore.parse(src).query).username;
-                                if (hasUserName(contactArr, username)) {
+                                if (username.substr(0, 1) != "@" || hasUserName(contactArr, username)) {
                                     return null
                                 } else {
                                     return contact.findElement({css: '.info .nickname'})
@@ -117,11 +122,19 @@ function spiderContactList(self, contactArr){
                                 return null;
                             })
                             .then(function (nickname) {
-                                if(nickname){
-                                    return {
-                                        nickname: nickname,
-                                        username: username
-                                    };
+                                if(nickname || typeof nickname === 'string'){
+                                    if(validateIsNormalStrOrNot(nickname)){
+                                        return null;
+                                    }
+                                    else if(nickname === ""){
+                                        return null;
+                                    }
+                                    else{
+                                        return {
+                                            nickname: nickname,
+                                            username: username
+                                        };
+                                    }
                                 }
                                 return null;
                             })
@@ -143,7 +156,7 @@ function spiderContactList(self, contactArr){
 function hasUserName(arr, key) {
     var self = arr;
     for(var i=0, len=self.length; i<len; i++){
-        if(self[i].username === key){
+        if(self[i] && self[i].username === key){
             return true;
         }
     }

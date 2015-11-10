@@ -58,6 +58,7 @@ module.exports = {
                             })
                             .then(function () {
                                 var code = codeService.fetch();
+                                data.bid = code;
                                 return itemp.sendKeys(code)
                             })
                             .then(function () {
@@ -158,7 +159,7 @@ module.exports = {
                 var formatUrl = url.format(urlJson);
                 request.get({url: formatUrl, jar: self.j, encoding: null}, function(err, res, body){
                     if(body && body.length){
-                        console.log("body  length  "+body.length)
+                        console.info("[flow]: Succeed to upload head img, body  length  "+body.length)
                     }
                     var formData = {file: {value: body, options: {filename: 'xxx.jpg'}}};
                     request.post({url:fsServer, formData: formData}, function(err, res, body) {

@@ -41,9 +41,9 @@ pubSubService.subClient.on('message', function(channel, message){
 //event handler
 function startHandler(channel, msg){
     //msg = {id:'id'}
-    console.log("the bot[id]=" + msg.botid + " is starting...");
+    console.log("[system]: the bot[id]=" + msg.botid + " is starting...");
     if(botManagar.getBotById(msg.botid)){
-        console.warn('the bot is started already.');
+        console.warn('[system]: the bot is started already.');
         return;
     }
     var service = new Service(msg.botid);
@@ -73,7 +73,7 @@ function startHandler(channel, msg){
         pubSubService.pubClient.publish('sbot:abort', JSON.stringify({err: err, data: data}));
     });
     service.onRemarkContact(function(err, data){
-        console.log(data);
+        console.error(data);
         if(err) return console.log(err);
         pubSubService.pubClient.publish('sbot:contact-remarked', JSON.stringify({err: err, data: data}));
     });

@@ -12,15 +12,15 @@
   "license": "",
   "dependencies": {
     "athena-settings": "git+https://henryleu:c148960791ab761064ecfbb07b7fdf582ff008df@github.com/trillers/athena-settings.git",
-    "co": "*",
     "bluebird": "^2.9.34",
+    "co": "*",
+    "l-mq": "*",
     "lodash": "~3.8.0",
     "log4js": "~0.6.22",
     "redis": "~0.12.1",
     "redis-sentinel": "^0.3.3",
     "request": "^2.51.0",
     "selenium-webdriver": "^2.46.1",
-    "l-mq": "*",
     "underscore": "*"
   },
   "devDependencies": {

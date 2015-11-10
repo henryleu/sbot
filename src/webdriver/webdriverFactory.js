@@ -5,7 +5,7 @@ var source = {
 };
 
 require('./proxy/shareIO')(webdriver, source, {shareIO: true});
-var clientType = process.argv[1];
+
 module.exports = function createDriver(){
     var driver = new webdriver.Builder()
         .withCapabilities(webdriver.Capabilities.chrome())

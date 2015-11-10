@@ -12,10 +12,13 @@ function _findOnePro(self, id, callback){
     self.driver.findElement(searchLocator)
         .then(function(searchItem){
             searchInput = searchItem;
-            return searchItem.sendKeys(id);
+            return searchItem.sendKeys(id)
+                .thenCatch(function(e){
+                    console.error(e)
+                })
         })
         .then(function(){
-            console.log('send ok');
+            console.log('[flow]: search keys '+ id);
             return self.driver.sleep(1000);
         })
         .then(function(){
@@ -36,13 +39,10 @@ function _findOnePro(self, id, callback){
                     .then(function(infoItem){
                         return infoItem.getText()
                             .then(function (value) {
-                                console.log("group nick name--------" + value);
                                 i++;
                                 if (value === id) {
-                                    console.log("group name equals " + value)
                                     contactItem.click()
                                         .then(function(){
-                                            console.log('the button clicked')
                                             callback(null, null);
                                         })
                                         .thenCatch(function(e){
@@ -52,15 +52,18 @@ function _findOnePro(self, id, callback){
                                 }
                                 else if(i === len){
                                     //send to is not exist
-                                    reset(self, function(){
                                         searchInput.clear()
                                             .then(function(){
-                                                callback(new Error('user does not exist'));
+                                                return self.driver.findElement(webdriver.By.css('.header')).click();
+                                            })
+                                            .then(function(){
+                                                reset(self, function(){
+                                                    callback(new Error('user does not exist'));
+                                                });
                                             })
                                             .thenCatch(function(e){
                                                 callback(new Error('Failed to clear search input'));
                                             })
-                                    });
                                 }
                                 else{
                                     //unknow error
@@ -81,6 +84,10 @@ function _findOnePro(self, id, callback){
                     .then(function(){
                         reset(self, callback, e);
                     })
+            }
+            else{
+                console.error(e);
+                callback(e);
             }
         })
 }
