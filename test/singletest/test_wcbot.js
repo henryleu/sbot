@@ -47,12 +47,8 @@ describe('wc_bot', function(){
             }, 5000);
         });
         it('success', function(done){
-            pubSubService.pubClient.publish('sbot:contact-list-remark-request', JSON.stringify({
-                botid: 'qtds',
-                ToUserName: 'bu-81KXw',
-                FromUserName: 'qtds',
-                MsgType: 'text',
-                Content: '打扰了'
+            pubSubService.pubClient.publish('sbot:contact-list-request', JSON.stringify({
+                botid: 'qtds'
             }));
             //pubSubService.pubClient.publish('sbot:message-send', JSON.stringify({
             //    botid: 'qtds',
@@ -64,17 +60,17 @@ describe('wc_bot', function(){
             //for(var i = 0, len =20; i<len; i++){
             //    pubSubService.pubClient.publish('sbot:message-send', JSON.stringify({
             //        botid: 'qtds',                  //祺天大圣
-            //        FromUserName: '',
+            //        FromUserName: 'qtds',
             //        ToUserName: 'bu-FboEC',         //星星妹
             //        MsgType: 'text',
             //        Content: 'hello ' + i
             //    }));
             //    pubSubService.pubClient.publish('sbot:message-send', JSON.stringify({
             //        botid: 'xxm',                   //星星妹
-            //        FromUserName: '',
-            //        ToUserName: '祺天大剩',   //包三哥
+            //        FromUserName: 'xxm',
+            //        ToUserName: 'bu-Babaa',   //包三哥
             //        MsgType: 'text',
-            //        Content: 'hello ' + i
+            //        Content: 'hello '
             //    }));
             //}
 

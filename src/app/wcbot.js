@@ -174,7 +174,46 @@ WcBot.prototype.groupList = function(callback){
 };
 
 /**
- * spider the contact,s info(nickname and headimgid)
+ * spider contact list, obtain all users whether remarked or not
+ * @param callback
+ */
+WcBot.prototype.contactList = function(callback){
+    var self = this;
+    self.taskQueue.enqueue(function(cb){
+        var resultList = null;
+        spiderContactListInfo(self, function(e, list){
+            resultList = list;
+            if(e){
+                return cb(e);
+            }
+            receiveReset(self, cb);
+            list.forEach(function(contact){
+                if(contact.nickname.substr(0, 3) != 'bu-'){
+                    self.taskQueue.enqueue(completeProfileAsync, {args:[self, contact.nickname]}, function(err, data){
+                        if(err){
+                            console.log("[flow]: Failed to get contact list");
+                            console.warn(err);
+                        }else{
+                            self.emit('contactlist', {err: null, data: data})
+                        }
+                    });
+                }else{
+                    self.readProfile(contact.nickname, function(err, data){
+                        if(err){
+                            console.log("[flow]: Failed to get contact list");
+                            console.warn(err);
+                        }else{
+                            self.emit('contactlist', {err: null, data: data})
+                        }
+                    });
+                }
+            });
+        })
+    }, null, callback);
+};
+
+/**
+ * spider the contact,s info(nickname, headimgid, remark, place and sex)
  * @param bid (string=)
  * @param callback
  */
@@ -202,6 +241,17 @@ WcBot.prototype.contactListRemark = function(callback){
             });
         })
     }, null, callback);
+};
+
+/**
+ * Attach a contact list listener on WcBot
+ * @param handler
+ */
+WcBot.prototype.onContactList = function(handler){
+    var self = this;
+    self.removeAllListeners('contactlist').on('contactlist', function(data){
+        handler.call(self, data.err, data.data)
+    });
 };
 
 /**

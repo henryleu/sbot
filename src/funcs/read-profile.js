@@ -88,9 +88,13 @@ function readProfileChain(self, callback){
                     data.botid = self.id;
                     return;
                 })
+                .thenCatch(function(){
+                    console.warn('[flow]: place is not been seted');
+                    data.place = "";
+                })
         })
         .then(function(){
-            return pop.findElement({'css': 'div.profile_mini_bd>div.nickname_area i'})
+            return pop.findElement({'css': 'div.profile_mini_bd>div.nickname_area i[ng-if]'})
                 .then(function(sexNode){
                     return sexNode.getAttribute('class')
                         .then(function(txt){
@@ -107,6 +111,10 @@ function readProfileChain(self, callback){
                             console.info('[flow]: sex is ' + data.sex);
                         })
                 })
+                .thenCatch(function(){
+                    console.warn('[flow]: sex is not been seted');
+                    data.sex = 0;
+                })
         })
         .then(function(){
             return pop.findElement({'css': 'div.profile_mini_bd>div.nickname_area h4'})
@@ -116,6 +124,10 @@ function readProfileChain(self, callback){
                             console.info('[flow]: nickname is ' + txt);
                             return data.nickname = txt;
                         })
+                })
+                .thenCatch(function(){
+                    console.warn('[flow]: nickname is not been seted');
+                    data.nickname = "";
                 })
         })
         .then(function(){
