@@ -19,6 +19,9 @@ module.exports = function(wcbot, nickname, callback){
             return profileHelper.readSex(panelEl, data, wcbot)
         })
         .then(function(){
+            return profileHelper.readNickName(panelEl, data, wcbot)
+        })
+        .then(function(){
             return profileHelper.remark(panelEl, data, wcbot)
         })
         .then(function(){

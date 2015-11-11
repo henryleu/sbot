@@ -1,4 +1,5 @@
 var webdriver = require('selenium-webdriver');
+var settings = require('../app/settings');
 var receiveRestLocator = webdriver.By.css('div.chat_list div.top');
 module.exports = function(self, callback, err){
     var error = err ? err : null;
@@ -7,8 +8,7 @@ module.exports = function(self, callback, err){
             return titleEL.getText()
         })
         .then(function(title){
-            console.warn(title)
-            if(title === 'File Transfer'){
+            if(title === settings.RESET_TITLE){
                 return callback(error);
             } else {
                 return self.driver.findElement(receiveRestLocator)
@@ -21,7 +21,7 @@ module.exports = function(self, callback, err){
             }
         })
         .thenCatch(function(err){
-            console.log("Failed to reset in list [code]-------");
+            console.warn("Failed to reset in list [code]-------");
             console.warn(err);
         })
 };

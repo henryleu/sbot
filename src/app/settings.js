@@ -16,6 +16,8 @@ var callCsToLoginGap = 5*60*1000;
 
 var waitForLoginGap = 2000;
 
+var RESET_TITLE = "File Transfer";
+
 module.exports = {
     reconnectTime: reconnectTime,
     fsUrl: fsUrl,
@@ -24,5 +26,6 @@ module.exports = {
     pollingPrintGap: pollingPrintGap,
     pollingLoginOrNotGap: pollingLoginOrNotGap,
     callCsToLoginGap: callCsToLoginGap,
-    waitForLoginGap: waitForLoginGap
+    waitForLoginGap: waitForLoginGap,
+    RESET_TITLE: RESET_TITLE
 };
