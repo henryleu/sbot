@@ -194,16 +194,17 @@ WcBot.prototype.contactList = function(callback){
                             console.log("[flow]: Failed to get contact list");
                             console.warn(err);
                         }else{
-                            self.emit('contactlist', {err: null, data: data})
+                            self.emit('contactprofile', {err: null, data: data})
                         }
                     });
                 }else{
                     self.readProfile(contact.nickname, function(err, data){
+                        data.botid = self.id;
                         if(err){
                             console.log("[flow]: Failed to get contact list");
                             console.warn(err);
                         }else{
-                            self.emit('contactlist', {err: null, data: data})
+                            self.emit('contactprofile', {err: null, data: data})
                         }
                     });
                 }
@@ -247,9 +248,9 @@ WcBot.prototype.contactListRemark = function(callback){
  * Attach a contact list listener on WcBot
  * @param handler
  */
-WcBot.prototype.onContactList = function(handler){
+WcBot.prototype.onContactProfile = function(handler){
     var self = this;
-    self.removeAllListeners('contactlist').on('contactlist', function(data){
+    self.removeAllListeners('contactprofile').on('contactprofile', function(data){
         handler.call(self, data.err, data.data)
     });
 };

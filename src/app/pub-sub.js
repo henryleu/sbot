@@ -79,10 +79,10 @@ function startHandler(channel, msg){
         if(err) return console.log(err);
         pubSubService.pubClient.publish('sbot:contact-remarked', JSON.stringify({err: err, data: data}));
     });
-    service.onContactList(function(err, data){
+    service.onContactProfile(function(err, data){
         console.error(data);
         if(err) return console.log(err);
-        pubSubService.pubClient.publish('sbot:contact-list', JSON.stringify({err: err, data: data}));
+        pubSubService.pubClient.publish('sbot:contact-profile', JSON.stringify({err: err, data: data}));
     });
     botManagar.setBot(service);
     service.start();
