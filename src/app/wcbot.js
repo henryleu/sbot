@@ -13,12 +13,15 @@ var createDriver = require('../webdriver/webdriverFactory');
 var spiderGroupListInfo = require('../funcs/group-list');
 var spiderContactListInfo = require('../funcs/contact-list');
 var receiveReset = require('../funcs/reset-pointer');
-var _findOnePro = require('../funcs/find-one-contract');
+var _findOnePro = require('../funcs/find-one-contact');
 var readProfile = require('../funcs/read-profile').readProfile;
 var completeProfileAsync = require('../funcs/profile-complete');
 var suggestFriendHandler = require('../funcs/friend-suggest-message');
 var _modifyRemarkAsync = require('../funcs/modify-user-remark');
 var receiveMessageHandler = require('../funcs/receive-message');
+var sendImage = require('../funcs/send-image');
+var addUserInGroup = require('../funcs/add-user-group');
+
 /**
  * @param id(string=) botid
  * @constructor
@@ -114,11 +117,11 @@ WcBot.prototype.init = function(bot) {
 };
 
 /**
- * Send a msg to a contact
+ * Send a text msg to a contact
  * @param json {sendTo, content}
  * @param callback
  */
-WcBot.prototype.send = function(json, callback) {
+WcBot.prototype.sendText = function(json, callback) {
     var self = this;
     console.info("[transaction]: Begin to send message to the contact which bid is " + json.sendTo);
     self.taskQueue.enqueue(function(cb) {
@@ -149,6 +152,33 @@ WcBot.prototype.send = function(json, callback) {
                     console.log(e);
                     cb();
                 })
+        })
+    }, null, callback)
+};
+
+/**
+ * Send a image msg to a contact
+ * @param json {content mediaId}
+ * @param callback
+ */
+WcBot.prototype.sendImage = function(json, callback) {
+    self.enqueue(function(callback){
+        console.info("[transaction]: Begin to send image to the contact which bid is " + json.sendTo);
+        self.sendTo = json.sendTo;
+        var content = json.content;
+        self._findOne(function (err) {
+            if (err) {
+                console.warn("[flow]: Failed to find the contact");
+                console.warn(err);
+                return callback();
+            }
+            console.info("[flow]: Succeed to find the contact");
+            self.driver.call(sendImage, null, self.driver, content).thenCatch(function(err){
+                console.error("[flow]: Failed to send image");
+                console.error(err);
+                return callback(err)
+            });
+            self.driver.call(callback, null, null)
         })
     }, null, callback)
 };
@@ -505,6 +535,16 @@ WcBot.prototype._walkChatList = function(callback){
         .thenCatch(function(err){
             return callback(err);
         })
+};
+
+/**
+ * add users in the group
+ * @param group
+ * @param callback
+ */
+WcBot.prototype.addUserInGroup = function(group, callback){
+    var self = this;
+    this.taskQueue.enqueue(addUserInGroup, {args:[self, group]}, callback);
 };
 
 /**

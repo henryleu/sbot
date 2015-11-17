@@ -1,6 +1,6 @@
 var webdriver = require('selenium-webdriver')
 var profileHelper = require('./profile-helper');
-var findOne = require('./find-one-contract');
+var findOne = require('./find-one-contact');
 var findOneAsync = require('bluebird').promisify(findOne);
 var reset = require('./reset-pointer');
 var searchLocator = webdriver.By.className('frm_search');

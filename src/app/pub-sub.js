@@ -115,9 +115,28 @@ function sendHandler(channel, msg){
         return;
     }
     //msg = { ToUserName:xxx, MsgType:'text/voice/image', Content:String, Url:MediaUrl}
-    service.send({sendTo: msg.ToUserName, content: msg.Content}, function(err, data){
-        if(err) console.log('error occur------' + JSON.stringify(err));
-    });
+    var allowType = {
+        text: buildSendFn('text')(msg.Content),
+        image: buildSendFn('image')(msg.Url)
+    };
+    if(!(msg.MsgType in allowType)){
+        return console.warn('[system]: send message failed, the message type is invalid');
+    }
+    allowType[msg.MsgType]();
+    function buildSendFn(type){
+        return function(content){
+            return function(){
+                service["send" + firstCharToUppercase(type)].call(this, {sendTo: msg.ToUserName, content: content}, function(err){
+                    if(err) console.log('error occur------' + JSON.stringify(err));
+                });
+            }
+        }
+    }
+    function firstCharToUppercase(str){
+        var fc = str.substr(0, 1);
+        var rs = str.substr(1, -1);
+        return fc.toUpperCase() + rs;
+    }
 }
 
 function readProfileHandler(channel, msg){

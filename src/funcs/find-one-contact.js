@@ -67,7 +67,7 @@ function _findOnePro(self, id, callback){
                                 }
                                 else{
                                     //unknow error
-                                    console.log('process stop error: unknow error');
+                                    console.error('[flow]: process stop error: unknown error');
                                 }
                             })
                             .thenCatch(function(e){
@@ -79,15 +79,12 @@ function _findOnePro(self, id, callback){
             });
         })
         .thenCatch(function(e){
-            if(e.code == MYERROR.NO_RESULT){
-                searchInput.clear()
-                    .then(function(){
-                        reset(self, callback, e);
-                    })
-            }
-            else{
+            if(e.code != MYERROR.NO_RESULT){
                 console.error(e);
-                callback(e);
             }
+            searchInput.clear()
+                .then(function(){
+                    reset(self, callback, e);
+                })
         })
 }

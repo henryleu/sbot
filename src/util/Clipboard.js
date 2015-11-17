@@ -1,12 +1,25 @@
 var copyPaste = require('copy-paste');
 var fs = require('fs');
 var clipboard = {};
+var LMQ = require('l-mq');
+var queue = new LMQ(1);
 
 clipboard.copyImageByUrl = function(mediaUrl, callback){
     //TODO check image file's existence
-    //see http://stackoverflow.com/questions/17699599/node-js-check-exist-file
-    var stream = fs.createReadStream(mediaUrl);
-    copyPaste.copy(stream, callback);
+    fs.stat('foo.txt', function(err, stat) {
+        if(err == null) {
+            var stream = fs.createReadStream(mediaUrl);
+            queue.enqueue(function(stream, cb){
+                copyPaste.copy(stream, cb);
+            }, {args:[stream]}, callback);
+        } else if(err.code == 'ENOENT') {
+            console.error('Some other error: ', err.code);
+            callback(new Error('Failed to check image\'s existence error code is ' + err.code));
+        } else {
+            console.error('Some other error: ', err.code);
+            callback(new Error('Failed to check image\'s existence error code is ' + err.code));
+        }
+    });
 };
 
 module.exports = clipboard;

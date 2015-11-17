@@ -2,7 +2,7 @@ var webdriver = require('selenium-webdriver');
 var PromiseBB = require('bluebird')
 //external services
 var reset = require('./reset-pointer');
-var _findOnePro = require('../funcs/find-one-contract');
+var _findOnePro = require('../funcs/find-one-contact');
 var settings = require('../app/settings');
 var fsServer = settings.fsUrl;
 var _ = require('underscore');
