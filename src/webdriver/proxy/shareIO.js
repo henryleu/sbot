@@ -13,19 +13,24 @@ module.exports = function buildProxy(webdriver, source, options){
             proto[method] = function(){
                 var self = this;
                 var args = [].slice.call(arguments, 0);
-                return new webdriver.promise.Promise(function operationEnqueue(resolve, reject){
-                    queue.enqueue(
-                        function task(cb){
-                            var promise = methodOrigin.apply(self, args);
-                            promise.then(function(result){
-                                resolve(result);
-                                cb();
-                            })
-                            .thenCatch(function(e){
-                                reject(e);
-                            })
-                        }
-                    )
+                var driver = null;
+                (self instanceof webdriver.WebDriver) && (driver = self) || (driver = self.getDriver());
+                return driver.controlFlow().execute(function(){
+                    return new webdriver.promise.Promise(function operationEnqueue(resolve, reject){
+                        queue.enqueue(
+                            function task(cb){
+                                var promise = methodOrigin.apply(self, args);
+                                console.log('then' in promise)
+                                promise.then(function(result){
+                                    resolve(result);
+                                    cb();
+                                })
+                                .thenCatch(function(e){
+                                    reject(e);
+                                })
+                            }
+                        )
+                    });
                 });
             }
         })

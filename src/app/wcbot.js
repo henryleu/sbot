@@ -19,7 +19,7 @@ var completeProfileAsync = require('../funcs/profile-complete');
 var suggestFriendHandler = require('../funcs/friend-suggest-message');
 var _modifyRemarkAsync = require('../funcs/modify-user-remark');
 var receiveMessageHandler = require('../funcs/receive-message');
-var sendImage = require('../funcs/send-image');
+var sendImageHelper = require('../funcs/send-image');
 var addUserInGroup = require('../funcs/add-user-group');
 
 /**
@@ -124,6 +124,7 @@ WcBot.prototype.init = function(bot) {
 WcBot.prototype.sendText = function(json, callback) {
     var self = this;
     console.info("[transaction]: Begin to send message to the contact which bid is " + json.sendTo);
+    console.log(self);
     self.taskQueue.enqueue(function(cb) {
         self.sendTo = json.sendTo;
         var content = json.content;
@@ -162,7 +163,8 @@ WcBot.prototype.sendText = function(json, callback) {
  * @param callback
  */
 WcBot.prototype.sendImage = function(json, callback) {
-    self.enqueue(function(callback){
+    var self = this;
+    self.taskQueue.enqueue(function(callback){
         console.info("[transaction]: Begin to send image to the contact which bid is " + json.sendTo);
         self.sendTo = json.sendTo;
         var content = json.content;
@@ -173,12 +175,16 @@ WcBot.prototype.sendImage = function(json, callback) {
                 return callback();
             }
             console.info("[flow]: Succeed to find the contact");
-            self.driver.call(sendImage, null, self.driver, content).thenCatch(function(err){
+            self.driver.call(function(){
+                sendImageHelper(self.driver, content);
+            }).thenCatch(function(err){
                 console.error("[flow]: Failed to send image");
                 console.error(err);
                 return callback(err)
             });
-            self.driver.call(callback, null, null)
+            self.driver.call(function(){
+                receiveReset(self,callback, null);
+            });
         })
     }, null, callback)
 };

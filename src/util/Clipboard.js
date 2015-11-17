@@ -6,10 +6,11 @@ var queue = new LMQ(1);
 
 clipboard.copyImageByUrl = function(mediaUrl, callback){
     //TODO check image file's existence
-    fs.stat('foo.txt', function(err, stat) {
+    fs.stat(mediaUrl, function(err, stat) {
         if(err == null) {
             var stream = fs.createReadStream(mediaUrl);
             queue.enqueue(function(stream, cb){
+                console.error(stream);
                 copyPaste.copy(stream, cb);
             }, {args:[stream]}, callback);
         } else if(err.code == 'ENOENT') {

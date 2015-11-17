@@ -25,6 +25,15 @@ pubSubService.subClient.subscribe('sbot:group-list-request');
 pubSubService.subClient.subscribe('sbot:contact-list-request');
 pubSubService.subClient.subscribe('sbot:contact-list-remark-request');
 
+//do some test
+//pubSubService.pubClient.publish('sbot:start', JSON.stringify({
+//    botid: 'qtds'
+//}));
+//pubSubService.pubClient.publish('sbot:message-send', JSON.stringify({
+//    botid: 'qtds',
+//    Url: ''
+//}));
+
 //listen message event from athena
 pubSubService.subClient.on('message', function(channel, message){
     console.log("redis recieve a message, channel is " + channel + " , message is " + message)
@@ -126,7 +135,11 @@ function sendHandler(channel, msg){
     function buildSendFn(type){
         return function(content){
             return function(){
-                service["send" + firstCharToUppercase(type)].call(this, {sendTo: msg.ToUserName, content: content}, function(err){
+                console.log("************");
+                console.log(type);
+                console.log(content);
+                console.log(service["send" + firstCharToUppercase(type)]);
+                service["send" + firstCharToUppercase(type)].call(service, {sendTo: msg.ToUserName, content: content}, function(err){
                     if(err) console.log('error occur------' + JSON.stringify(err));
                 });
             }
@@ -134,7 +147,7 @@ function sendHandler(channel, msg){
     }
     function firstCharToUppercase(str){
         var fc = str.substr(0, 1);
-        var rs = str.substr(1, -1);
+        var rs = str.substr(1);
         return fc.toUpperCase() + rs;
     }
 }

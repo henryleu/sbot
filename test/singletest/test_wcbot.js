@@ -46,10 +46,18 @@ describe('wc_bot', function(){
                 done();
             }, 5000);
         });
+        require('../../src/app/init');
         it('success', function(done){
-            pubSubService.pubClient.publish('sbot:contact-list-request', JSON.stringify({
-                botid: 'qtds'
+            pubSubService.pubClient.publish('sbot:message-send', JSON.stringify({
+                MsgType: 'image',
+                FromUserName: 'qtds',
+                ToUserName: 'bu-12Rpw',
+                botid: 'qtds',
+                Url: '/Users/bjhl/dev/codebase/athena/public/uploads/upload_ffbcc160c4a2f0d1330987a198b6b5a8.jpg'
             }));
+            //pubSubService.pubClient.publish('sbot:contact-list-request', JSON.stringify({
+            //    botid: 'qtds'
+            //}));
             //pubSubService.pubClient.publish('sbot:message-send', JSON.stringify({
             //    botid: 'qtds',
             //    ToUserName: '交友',
