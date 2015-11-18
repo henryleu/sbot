@@ -7,14 +7,24 @@ var copyImageByUrl = require('bluebird').promisify(clipboard.copyImageByUrl);
 
 module.exports = function(mediaUrl){
     var driver = this;
-    driver.call(copyImageByUrl, null, mediaUrl).catchErr('[flow]: Failed to copy image to clipboard');
+    driver.call(copyImageByUrl, null, mediaUrl)
+        .catchErr('[flow]: Failed to copy image to clipboard');
     var editEl = driver.findElement(webdriver.By.css('#editArea'));
-    editEl.sendKeys(webdriver.Key.chord(webdriver.Key.CONTROL, 'v')).catchErr('[flow]: Failed to sendKeys');
-    driver.wait(webdriver.until.elementLocated(loadingLocator), 5000).catchErr('[flow]: Failed to wait loadingLocator');
+    editEl.sendKeys(webdriver.Key.chord(webdriver.Key.CONTROL, 'v'))
+        .catchErr('[flow]: Failed to sendKeys');
+    editEl.getText().then(function(text){
+        console.log("********************");
+        console.log(text);
+    });
+    driver.wait(webdriver.until.elementLocated(loadingLocator), 5000)
+        .catchErr('[flow]: Failed to wait loadingLocator');
     var loadingNode = driver.findElement(loadingLocator);
-    driver.wait(waitForLoadingHide(loadingNode), 5000).catchErr('[flow]: Failed to waitEl hidden loadingNode');
-    driver.wait(webdriver.until.elementLocated(imgLocator), 5000).catchErr('[flow]: Failed to waitEl present loadingNode');
-    driver.findElement(webdriver.By.css(sendLocator)).click().catchErr('[flow]: Failed to click sendLocator');
+    driver.wait(waitForLoadingHide(loadingNode), 5000)
+        .catchErr('[flow]: Failed to waitEl hidden loadingNode');
+    driver.wait(webdriver.until.elementLocated(imgLocator), 5000)
+        .catchErr('[flow]: Failed to waitEl present loadingNode');
+    driver.findElement(webdriver.By.css(sendLocator)).click()
+        .catchErr('[flow]: Failed to click sendLocator');
 };
 
 function waitForLoadingHide(loadingNode){

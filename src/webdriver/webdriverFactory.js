@@ -7,9 +7,6 @@ var source = {
 //build webdriver proxy
 require('./proxy/shareIO')(webdriver, source, {shareIO: true});
 
-//build webdriver decorator
-require('./decorator/sendImage');
-
 module.exports = function createDriver(){
     var driver = new webdriver.Builder()
         .withCapabilities(webdriver.Capabilities.chrome())
