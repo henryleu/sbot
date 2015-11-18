@@ -175,12 +175,10 @@ WcBot.prototype.sendImage = function(json, callback) {
                 return callback();
             }
             console.info("[flow]: Succeed to find the contact");
-            self.driver.call(function(){
-                sendImageHelper(self.driver, content);
-            }).thenCatch(function(err){
+            self.driver.call(sendImageHelper, self.driver, content).thenCatch(function(err){
                 console.error("[flow]: Failed to send image");
                 console.error(err);
-                return callback(err)
+                receiveReset(self,callback, err);
             });
             self.driver.call(function(){
                 receiveReset(self,callback, null);

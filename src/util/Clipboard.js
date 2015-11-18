@@ -10,7 +10,6 @@ clipboard.copyImageByUrl = function(mediaUrl, callback){
         if(err == null) {
             var stream = fs.createReadStream(mediaUrl);
             queue.enqueue(function(stream, cb){
-                console.error(stream);
                 copyPaste.copy(stream, cb);
             }, {args:[stream]}, callback);
         } else if(err.code == 'ENOENT') {

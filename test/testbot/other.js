@@ -9,13 +9,20 @@ var driver = new webdriver.Builder()
     driver.get('http://www.baidu.com');
     var input = driver.findElement({css: '#kw'});
     input.sendKeys("ok");
+    driver.call(test, driver, 'lisi');
     driver.call(function(){
-        console.log("123");
+        console.log("ok")
     });
     driver.sleep(3000);
     driver.quit();
 
-
+function test(driver, opt2){
+    console.log(this)
+    console.log(opt2);
+    driver.call(function(){
+        console.log("222")
+    }, null, null);
+}
 //function thunkify(fn){
 //    var originFn = fn;
 //    return function(){

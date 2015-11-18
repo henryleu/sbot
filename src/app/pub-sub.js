@@ -135,10 +135,6 @@ function sendHandler(channel, msg){
     function buildSendFn(type){
         return function(content){
             return function(){
-                console.log("************");
-                console.log(type);
-                console.log(content);
-                console.log(service["send" + firstCharToUppercase(type)]);
                 service["send" + firstCharToUppercase(type)].call(service, {sendTo: msg.ToUserName, content: content}, function(err){
                     if(err) console.log('error occur------' + JSON.stringify(err));
                 });

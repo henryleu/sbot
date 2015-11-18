@@ -15,7 +15,7 @@ describe('wc_bot', function(){
             }));
             setTimeout(function(){
                 done();
-            }, 20*1000);
+            }, 25*1000);
         })
     });
     //describe('#start2', function(){
