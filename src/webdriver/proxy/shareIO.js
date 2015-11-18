@@ -20,7 +20,6 @@ module.exports = function buildProxy(webdriver, source, options){
                         queue.enqueue(
                             function task(cb){
                                 var promise = methodOrigin.apply(self, args);
-                                console.log('then' in promise)
                                 promise.then(function(result){
                                     resolve(result);
                                     cb();

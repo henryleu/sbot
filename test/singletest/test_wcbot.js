@@ -51,7 +51,7 @@ describe('wc_bot', function(){
             pubSubService.pubClient.publish('sbot:message-send', JSON.stringify({
                 MsgType: 'image',
                 FromUserName: 'qtds',
-                ToUserName: 'bu-12Rpw',
+                ToUserName: 'bu-BBtuy',
                 botid: 'qtds',
                 Url: '/Users/bjhl/dev/codebase/athena/public/uploads/upload_ffbcc160c4a2f0d1330987a198b6b5a8.jpg'
             }));

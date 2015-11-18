@@ -43,8 +43,8 @@ util.inherits(WcBot, EventEmitter);
  * Launch the chrome client and get ready to polling
  */
 WcBot.prototype.start = function(){
-    console.log('begin start')
     var self = this;
+    console.log('[transaction]: begin to start botid=' + self.id);
     self._login(function(err, data){
         console.log('login ok');
         if(err) {
@@ -424,7 +424,7 @@ WcBot.prototype._polling = function(){
  */
 WcBot.prototype._login = function(callback){
     var self = this;
-    console.log("begin login");
+    console.log("[flow]: Begin to login");
     self.driver.get(settings.wxIndexUrl)
         .then(function(){
             needLogin(self, function(err, media_id){
