@@ -5,6 +5,7 @@ var imgLocator = webdriver.By.css('.ngdialog-content .dialog_bd img:nth-child(2)
 var clipboard = require('../util/Clipboard');
 var copyImageByUrl = require('bluebird').promisify(clipboard.copyImageByUrl);
 
+
 module.exports = function(mediaUrl){
     var driver = this;
     driver.call(copyImageByUrl, null, mediaUrl)
