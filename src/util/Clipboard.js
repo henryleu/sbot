@@ -26,7 +26,8 @@ function copyToClipboard(mediaUrl,  callback){
         console.log('stdout: ' + stdout);
         console.log('stderr: ' + stderr);
         if (error !== null) {
-            console.info('[flow]: Failed to copy image to clipboard');
+            console.error('[flow]: Failed to copy image to clipboard');
+            return callback(new Error('[flow]: Failed to copy image to clipboard'))
         }
         console.info('[flow]: Succeed to copy image to clipboard');
         callback(null)
@@ -34,7 +35,7 @@ function copyToClipboard(mediaUrl,  callback){
 }
 
 function readFromClipboard(callback){
-    exec('python ' + __dirname + '/paste.py ' + mediaUrl,
+    exec('python ' + __dirname + '/paste.py',
         function (error, stdout, stderr) {
             console.log('stdout: ' + stdout);
             console.log('stderr: ' + stderr);
