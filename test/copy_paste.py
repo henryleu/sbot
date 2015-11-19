@@ -10,13 +10,13 @@ def copy_image(f):
     assert os.path.exists(f), "file does not exist"
     image = gtk.gdk.pixbuf_new_from_file(f)
 
-    clipboard = gtk.clipboard_get()
+    clipboard = gtk.clipboard_get(gtk.gdk.SELECTION_CLIPBOARD)
     clipboard.set_image(image)
     clipboard.store()
 
 def paste_image():
-    clipboard = gtk.clipboard_get()
-    clipboard.request_image(handler, '123')
+    clipboard = gtk.clipboard_get(gtk.gdk.SELECTION_CLIPBOARD)
+    clipboard.request_image(handler)
 
 def handler(arg1, buf, arg3):
     print "**************"
