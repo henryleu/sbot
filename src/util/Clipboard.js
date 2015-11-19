@@ -9,29 +9,42 @@ clipboard.copyImageByUrl = function(mediaUrl, callback){
     fs.stat(mediaUrl, function(err, stat) {
         if(err == null) {
             queue.enqueue(function(mediaUrl, cb){
-                copyToClipboard(mediaUrl, cb);
+                copyToClipboard(mediaUrl, function(){
+                    readFromClipboard(cb)
+                });
             }, {args:[mediaUrl]}, callback);
         } else if(err.code == 'ENOENT') {
-            console.error('Some other error: ', err.code);
-            callback(new Error('Failed to check image\'s existence error code is ' + err.code));
+            callback(new Error('Failed to copy image to clipboard, image is not exist'));
         } else {
-            console.error('Some other error: ', err.code);
             callback(new Error('Failed to check image\'s existence error code is ' + err.code));
         }
     });
 };
 function copyToClipboard(mediaUrl,  callback){
-    exec('python ' + __dirname + '/copypaste.py ' + mediaUrl,
+    exec('python ' + __dirname + '/copy.py ' + mediaUrl,
         function (error, stdout, stderr) {
         console.log('stdout: ' + stdout);
         console.log('stderr: ' + stderr);
         if (error !== null) {
-            console.log('exec error: ' + error);
+            console.info('[flow]: Failed to copy image to clipboard');
         }
+        console.info('[flow]: Succeed to copy image to clipboard');
         callback(null)
     })
 }
 
+function readFromClipboard(callback){
+    exec('python ' + __dirname + '/paste.py ' + mediaUrl,
+        function (error, stdout, stderr) {
+            console.log('stdout: ' + stdout);
+            console.log('stderr: ' + stderr);
+            if (error !== null) {
+                console.info('[flow]: Failed to copy image to clipboard');
+            }
+            console.info('[flow]: Succeed to copy image to clipboard');
+            callback(null, stdout)
+        })
+}
 
 //clipboard.copyImageByUrl = function(mediaUrl, callback){
 //    //TODO check image file's existence

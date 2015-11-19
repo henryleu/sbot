@@ -20,8 +20,8 @@ def paste_image():
 
 def handler(arg1, buf, arg3):
     print "**************"
-    print buf.get_width()
-    print buf.get_height()
+    print "image width  is " + str(buf.get_width()) + "px"
+    print "image height is " + str(buf.get_height()) + "px"
 
 copy_image(sys.argv[1]);
 time.sleep(1);
