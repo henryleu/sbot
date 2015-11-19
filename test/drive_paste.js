@@ -13,11 +13,11 @@ console.log('requesting ' + websiteUrl + ' with ' + browserName);
 var itemEl = driver.findElement(webdriver.By.name('wd'));
 itemEl.sendKeys('ta');
 driver.sleep(2000);
-editEl.sendKeys(webdriver.Key.chord(webdriver.Key.CONTROL, 'a'));
+itemEl.sendKeys(webdriver.Key.chord(webdriver.Key.CONTROL, 'a'));
 driver.sleep(2000);
-editEl.sendKeys(webdriver.Key.chord(webdriver.Key.CONTROL, 'v'));
+itemEl.sendKeys(webdriver.Key.chord(webdriver.Key.CONTROL, 'v'));
 driver.sleep(2000);
-editEl.sendKeys(webdriver.Key.chord(webdriver.Key.CONTROL, 'v'));
+itemEl.sendKeys(webdriver.Key.chord(webdriver.Key.CONTROL, 'v'));
 
 driver.findElement(webdriver.By.id('su')).click();
 
