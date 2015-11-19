@@ -11,6 +11,7 @@ def paste_image():
     clipboard.request_image(handler, '123')
 
 def handler(arg1, buf, arg3):
+    print "[flow]: image width is"
     print str(buf.get_width())
 
 paste_image();
