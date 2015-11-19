@@ -39,7 +39,10 @@ driver.call(function(){
 });
 
 driver.findElement(webdriver.By.id('su')).click();
-
+driver.call(function(){
+    console.log('type search button...')
+});
+driver.sleep(1000);
 driver.wait(function () {
     return driver.getTitle().then(function (title) {
         console.log(title);
