@@ -21,7 +21,7 @@ clipboard.copyImageByUrl = function(mediaUrl, callback){
     });
 };
 function copyToClipboard(mediaUrl,  callback){
-    exec('python ' + __dirname + '/copy.py ' + mediaUrl,
+    exec('python ' + __dirname + '/copyToClipboard.py ' + mediaUrl,
         function (error, stdout, stderr) {
         console.log('stdout: ' + stdout);
         console.log('stderr: ' + stderr);
@@ -35,7 +35,7 @@ function copyToClipboard(mediaUrl,  callback){
 }
 
 function readFromClipboard(callback){
-    exec('python ' + __dirname + '/paste.py',
+    exec('python ' + __dirname + '/pasteFromClipboard.py',
         function (error, stdout, stderr) {
             console.log('stdout: ' + stdout);
             console.log('stderr: ' + stderr);
