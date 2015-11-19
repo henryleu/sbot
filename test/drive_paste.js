@@ -10,7 +10,7 @@ var websiteUrl = 'https://www.baidu.com/';
 driver.get(websiteUrl);
 console.log('requesting ' + websiteUrl + ' with ' + browserName);
 
-var itemEl = driver.findElement(webdriver.By.name('wd'));
+var itemEl = driver.findElement(webdriver.By.id('kw'));
 itemEl.sendKeys('ta');
 driver.sleep(1000);
 itemEl.sendKeys(webdriver.Key.chord(webdriver.Key.CONTROL, 'a'));
