@@ -9,7 +9,8 @@ var driver = new webdriver.Builder()
     .withCapabilities(webdriver.Capabilities.chrome().setEnableNativeEvents(true))
     .build();
 var target = '酒剑仙';
-var imageUrl = '/Users/bjhl/dev/codebase/athena/public/uploads/upload_ef618467ce1d7d9016999841b3905eef.jpg';
+var imageUrl = '/home/www/athena/public/uploads/upload_8d5dbeddf0c4616dcd1eff7ebefe909f.jpeg';
+//var imageUrl = '/Users/bjhl/dev/codebase/athena/public/uploads/upload_ef618467ce1d7d9016999841b3905eef.jpg';
 driver.get('http://wx.qq.com');
 driver.wait(function(){
     return driver.findElement({css: '.nickname span'})
