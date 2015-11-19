@@ -11,7 +11,7 @@ driver.get(websiteUrl);
 console.log('requesting ' + websiteUrl + ' with ' + browserName);
 
 var itemEl = driver.findElement(webdriver.By.name('wd'));
-itemEl.sendKeys('webdriver');
+itemEl.sendKeys('ta');
 driver.sleep(2000);
 itemEl.sendKeys(webdriver.Key.CONTROL, "a", webdriver.Key.NULL);
 driver.sleep(2000);
@@ -23,7 +23,7 @@ driver.findElement(webdriver.By.id('su')).click();
 
 driver.wait(function () {
     return driver.getTitle().then(function (title) {
-        var ret = title === 'tesla_百度搜索';
+        var ret = title === 'tata_百度搜索';
         ret && console.log('drive successfully!');
         return ret;
     });

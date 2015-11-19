@@ -11,10 +11,10 @@ module.exports = function(mediaUrl){
     console.info('[flow]: Start to send image to contact url is ' + mediaUrl);
     var driver = this;
     driver.call(copyImageByUrl, null, mediaUrl)
-        .then(function(data){ console.info('[flow]: Image width is ' + data) })
         .catchErr('[flow]: Failed to copy image to clipboard');
     var editEl = driver.findElement(editorLocator);
     editEl.sendKeys(webdriver.Key.chord(webdriver.Key.CONTROL, 'v'))
+        .then(function(){ console.info('[flow]: Succeed to send Ctrl + v') })
         .catchErr('[flow]: Failed to sendKeys');
     driver.wait(webdriver.until.elementLocated(loadingLocator), 5000)
         .catchErr('[flow]: Failed to wait loadingLocator');
