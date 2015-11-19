@@ -1,3 +1,4 @@
+#! /usr/bin/python
 import pygtk
 pygtk.require('2.0')
 import gtk
@@ -11,6 +12,7 @@ def copy_image(f):
     clipboard = gtk.clipboard_get()
     clipboard.set_image(image)
     clipboard.store()
+
 
 
 copy_image(sys.argv[1]);

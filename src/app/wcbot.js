@@ -165,7 +165,7 @@ WcBot.prototype.sendText = function(json, callback) {
 WcBot.prototype.sendImage = function(json, callback) {
     var self = this;
     self.taskQueue.enqueue(function(callback){
-        console.info("[transaction]: Begin to send image to the contact which bid is " + json.sendTo);
+        console.info("[transaction]: Begin to send image to the contact which bid is " + json.sendTo + " url is " + json.content);
         self.sendTo = json.sendTo;
         var content = json.content;
         self._findOne(function (err) {
