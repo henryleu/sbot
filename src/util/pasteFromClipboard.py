@@ -5,12 +5,12 @@ import gtk
 import os
 import sys
 
-def paste_image():
-    clipboard = gtk.clipboard_get()
-    clipboard.request_image(handler, '123')
-
 def handler(arg1, buf, arg3):
     print "***************"
     print str(buf.get_width())
+
+def paste_image():
+    clipboard = gtk.clipboard_get()
+    clipboard.request_image(handler, '123')
 
 paste_image()
