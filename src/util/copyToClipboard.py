@@ -9,12 +9,12 @@ import time
 def copy_image(f):
     image = gtk.gdk.pixbuf_new_from_file(f)
 
-    clipboard = gtk.clipboard_get(gtk.gdk.SELECTION_SECONDARY)
+    clipboard = gtk.clipboard_get(gtk.gdk.SELECTION_CLIPBOARD)
     clipboard.set_image(image)
     clipboard.store()
 
 def paste_image():
-    clipboard = gtk.clipboard_get(gtk.gdk.SELECTION_SECONDARY)
+    clipboard = gtk.clipboard_get(gtk.gdk.SELECTION_CLIPBOARD)
     clipboard.request_image(handler, '123')
 
 def handler(arg1, buf, arg3):
