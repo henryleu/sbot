@@ -9,7 +9,10 @@ clipboard.copyImageByUrl = function(mediaUrl, callback){
     fs.stat(mediaUrl, function(err, stat) {
         if(err == null) {
             queue.enqueue(function(mediaUrl, cb){
-                copyToClipboard(mediaUrl, function(){
+                copyToClipboard(mediaUrl, function(err){
+                    if(err){
+                        return callback(err)
+                    }
                     readFromClipboard(cb)
                 });
             }, {args:[mediaUrl]}, callback);
@@ -40,9 +43,9 @@ function readFromClipboard(callback){
             console.log('stdout: ' + stdout);
             console.log('stderr: ' + stderr);
             if (error !== null) {
-                console.info('[flow]: Failed to copy image to clipboard');
+                console.info('[flow]: Failed to paste image from clipboard');
             }
-            console.info('[flow]: Succeed to copy image to clipboard');
+            console.info('[flow]: Succeed to paste image from clipboard');
             callback(null, stdout)
         })
 }
