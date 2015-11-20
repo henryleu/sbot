@@ -22,8 +22,8 @@ pubSubService.subClient.subscribe('sbot:stop');
 pubSubService.subClient.subscribe('sbot:message-send');
 pubSubService.subClient.subscribe('sbot:profile-request');
 pubSubService.subClient.subscribe('sbot:group-list-request');
-pubSubService.subClient.subscribe('sbot:contact-list-request');
-pubSubService.subClient.subscribe('sbot:contact-list-remark-request');
+//pubSubService.subClient.subscribe('sbot:contact-list-request');
+//pubSubService.subClient.subscribe('sbot:contact-list-remark-request');
 
 //do some test
 //pubSubService.pubClient.publish('sbot:start', JSON.stringify({
