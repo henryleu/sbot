@@ -16,6 +16,10 @@ module.exports = function(mediaUrl){
     editEl.sendKeys(webdriver.Key.chord(webdriver.Key.CONTROL, 'v'))
         .then(function(){ console.info('[flow]: Succeed to send Ctrl + v') })
         .catchErr('[flow]: Failed to sendKeys');
+    editEl.getText().then(function(text){
+        console.log("@@@@@@@@@@@@@@@@@@");
+        console.log(text)
+    });
     driver.wait(webdriver.until.elementLocated(loadingLocator), 5000)
         .catchErr('[flow]: Failed to wait loadingLocator');
     var loadingNode = driver.findElement(loadingLocator);
