@@ -6,22 +6,23 @@ import os
 import sys
 import time
 
-def copy_image(f):
-    image = gtk.gdk.pixbuf_new_from_file(f)
-
+def copy_image():
     clipboard = gtk.clipboard_get(gtk.gdk.SELECTION_CLIPBOARD)
-    clipboard.set_image(image)
+    print "the clipboard's display is *********"
+    print clipboard.get_display().get_name()
+    clipboard = gtk.clipboard_get(gtk.gdk.SELECTION_CLIPBOARD)
+    clipboard.set_text("hello world", -1)
     clipboard.store()
 
 def paste_image():
     clipboard = gtk.clipboard_get(gtk.gdk.SELECTION_CLIPBOARD)
-    clipboard.request_image(handler, '123')
+    clipboard.request_text(handler)
 
-def handler(arg1, buf, arg3):
+def handler(arg1, arg2, arg3):
     print "**************"
-    print "image width  is " + str(buf.get_width()) + "px"
-    print "image height is " + str(buf.get_height()) + "px"
+    print arg1
+    print arg2
 
-copy_image(sys.argv[1]);
+copy_image();
 time.sleep(1);
 paste_image();
