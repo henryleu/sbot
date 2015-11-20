@@ -35,10 +35,10 @@ driver.findElements({'css': 'div.contact_item.on'}).then(function(items){
 var editEl = driver.findElement(webdriver.By.css('#editArea'));
 driver.call(copyImageByUrl, null, imageUrl);
 editEl.sendKeys(webdriver.Key.chord(webdriver.Key.CONTROL, 'v'));
-driver.wait(webdriver.until.elementLocated(loadingLocator), 5000)
+driver.wait(webdriver.until.elementLocated(loadingLocator), 5000);
 var loadingNode = driver.findElement(loadingLocator);
-driver.wait(waitForLoadingHide(loadingNode), 5000)
-driver.wait(webdriver.until.elementLocated(imgLocator), 5000)
+driver.wait(waitForLoadingHide(loadingNode), 5000);
+driver.wait(webdriver.until.elementLocated(imgLocator), 5000);
 driver.findElement(sendLocator).click();
 driver.quit();
 
