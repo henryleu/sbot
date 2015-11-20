@@ -10,9 +10,14 @@ var driver = new webdriver.Builder()
 driver.get('https://www.baidu.com');
 driver.call(copyImageByUrlAsync, null, 'hello');
 var input = driver.findElement({css: '#kw'});
+input.sendKeys(webdriver.Key.chord('a', 'v'));
 input.sendKeys(webdriver.Key.chord(webdriver.Key.CONTROL, 'v'));
-input.getText().then(function(text){ console.log(text) });
-driver.sleep(1000);
+var suEl = driver.findElement({css: '#su'});
+suEl.click();
+driver.sleep(2000)
+driver.getTitle().then(function(title){
+    console.log(title)
+});
 driver.quit();
 
 function copyImageByUrl(mediaUrl, callback){
