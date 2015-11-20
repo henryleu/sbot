@@ -3,19 +3,18 @@ var exec = require('child_process').exec;
 var fs = require('fs');
 var LMQ = require('l-mq');
 var queue = new LMQ(1);
-var copyImageByUrlAsync = null;
+var copyImageByUrlAsync =require('bluebird').promisify(copyImageByUrl);
 var driver = new webdriver.Builder()
     .withCapabilities(webdriver.Capabilities.chrome().setEnableNativeEvents(true))
     .build();
 driver.get('https://www.baidu.com');
 driver.call(copyImageByUrlAsync, null, 'hello');
-var input = driver.findElement({css: '#kw'})
-input.sendKeys(webdriver.Key.chord(webdriver.Key.CONTROL, 'v'))
+var input = driver.findElement({css: '#kw'});
+input.sendKeys(webdriver.Key.chord(webdriver.Key.CONTROL, 'v'));
 input.getText().then(function(text){ console.log(text) });
 driver.sleep(1000);
 driver.quit();
 
-copyImageByUrlAsync = require('bluebird').promisify(copyImageByUrl);
 function copyImageByUrl(mediaUrl, callback){
     //TODO check image file's existence
     fs.stat(mediaUrl, function(err, stat) {
