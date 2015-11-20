@@ -17,7 +17,7 @@ module.exports = function(mediaUrl){
         .then(function(){ console.info('[flow]: Succeed to send Ctrl + v') })
         .catchErr('[flow]: Failed to sendKeys');
     editEl.getText().then(function(text){
-        console.log("@@@@@@@@@@@@@@@@@@");
+        console.log("the edit area,s text is*********");
         console.log(text)
     });
     driver.wait(webdriver.until.elementLocated(loadingLocator), 5000)
