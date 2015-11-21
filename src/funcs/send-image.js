@@ -29,6 +29,7 @@ module.exports = function(mediaUrl){
         .catchErr('[flow]: Failed to waitEl present loadingNode');
     driver.findElement(sendLocator).click()
         .catchErr('[flow]: Failed to click sendLocator');
+    driver.sleep(500);
 };
 
 function waitForLoadingHide(loadingNode){

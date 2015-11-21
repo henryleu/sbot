@@ -22,8 +22,7 @@ driver.getTitle().then(function(title){
 driver.quit();
 
 function copyToClipboard(callback){
-    console.log(callback)
-    exec('python ' + __dirname + '/copy_paste_text.py',
+    exec('xclip -selection clipboard -t image/jpg ./clipboard.jpg',
         function (error, stdout, stderr) {
             console.log('stdout: ' + stdout);
             console.log('stderr: ' + stderr);
