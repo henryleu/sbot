@@ -29,7 +29,7 @@ driver.quit();
 
 function copyToClipboard(callback){
     console.log("begin to copy")
-    exec('xclip -selection clipboard test.txt',
+    exec('xclip -d :10 -selection clipboard test.txt',
         {
             timeout: 1000
         },
