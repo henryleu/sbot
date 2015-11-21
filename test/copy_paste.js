@@ -32,7 +32,7 @@ function copyToClipboard(callback){
     exec('xclip -selection clipboard test.txt',
         {
             timeout: 1000
-        }
+        },
         function (error, stdout, stderr) {
             console.log('stdout: ' + stdout);
             console.log('stderr: ' + stderr);
