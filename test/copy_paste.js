@@ -10,7 +10,13 @@ var driver = new webdriver.Builder()
 var copyToClipboardAsync =require('bluebird').promisify(copyToClipboard);
 
 driver.get('https://www.baidu.com');
-driver.call(copyToClipboardAsync, null);
+driver.call(function(){
+    console.log("get ok")
+})
+driver.call(copyToClipboardAsync, null).thenCatch(function(e){ console.error(e) })
+driver.call(function(){
+    console.log("copy ok")
+})
 var input = driver.findElement(webdriver.By.id('kw'));
 input.sendKeys(webdriver.Key.chord(webdriver.Key.CONTROL, 'v'));
 var suEl = driver.findElement({css: '#su'});
@@ -34,3 +40,4 @@ function copyToClipboard(callback){
             callback(null)
         })
 }
+yanshang
