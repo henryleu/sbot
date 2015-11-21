@@ -1,12 +1,10 @@
 var exec = require('child_process').exec;
 var cmd = "xclip";
 var optsC = {
-    "-d": ":10",
     "-t": "image/jpg",
     "-selection": "c"
 };
 var optsP = {
-    "-d": ":10",
     "-t": "image/jpg",
     "-selection": "p"
 };

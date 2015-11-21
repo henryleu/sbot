@@ -29,7 +29,7 @@ driver.quit();
 
 function copyToClipboard(callback){
     console.log("begin to copy")
-    exec('xclip -selection clipboard clipboard.jpg',
+    exec('xclip -selection clipboard test.txt',
         function (error, stdout, stderr) {
             console.log('stdout: ' + stdout);
             console.log('stderr: ' + stderr);
