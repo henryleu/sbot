@@ -16,8 +16,7 @@ module.exports = function(mediaUrl){
 
     new webdriver.ActionSequence(driver)
         .click(webdriver.Button.MIDDLE)
-        .then(function(){ console.info('[flow]: Succeed to middling click') })
-        .catchErr('[flow]: Failed to sendKeys');
+        .perform();
     //editEl.sendKeys(webdriver.Key.chord(webdriver.Key.CONTROL, 'v'))
     //    .then(function(){ console.info('[flow]: Succeed to send Ctrl + v') })
     //    .catchErr('[flow]: Failed to sendKeys');
