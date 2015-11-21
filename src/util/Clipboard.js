@@ -19,7 +19,7 @@ clipboard.copyImageByUrl = function(mediaUrl, callback){
     });
 };
 function copyIt(url, callback){
-    exec('cat ' + url + ' | xclip -selection pixmap -t image/jpeg',
+    exec('xclip -t image/jpeg ' + url,
         {
             timeout: 1000
         },
