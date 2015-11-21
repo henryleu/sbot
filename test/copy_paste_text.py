@@ -7,14 +7,14 @@ import sys
 import time
 
 def copy_image():
-    clipboard = gtk.clipboard_get("CLIPBOARD")
+    clipboard = gtk.clipboard_get("PRIMARY")
     print "the clipboard's display is *********"
     print clipboard.get_display().get_name()
-    clipboard.set_text("hello world", -1)
+    clipboard.set_text("hello OKOK", -1)
     clipboard.store()
 
 def paste_image():
-    clipboard = gtk.clipboard_get("CLIPBOARD")
+    clipboard = gtk.clipboard_get("PRIMARY")
     clipboard.request_text(handler)
 
 def handler(arg1, str, arg3):
