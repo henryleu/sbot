@@ -40,4 +40,3 @@ function copyToClipboard(callback){
             callback(null)
         })
 }
-yanshang
