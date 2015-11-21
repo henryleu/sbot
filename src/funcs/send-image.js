@@ -13,9 +13,14 @@ module.exports = function(mediaUrl){
     driver.call(copyImageByUrl, null, mediaUrl)
         .catchErr('[flow]: Failed to copy image to clipboard');
     var editEl = driver.findElement(editorLocator);
-    editEl.sendKeys(webdriver.Key.chord(webdriver.Key.CONTROL, 'v'))
-        .then(function(){ console.info('[flow]: Succeed to send Ctrl + v') })
+
+    new webdriver.ActionSequence(driver)
+        .click(webdriver.Button.MIDDLE)
+        .then(function(){ console.info('[flow]: Succeed to middling click') })
         .catchErr('[flow]: Failed to sendKeys');
+    //editEl.sendKeys(webdriver.Key.chord(webdriver.Key.CONTROL, 'v'))
+    //    .then(function(){ console.info('[flow]: Succeed to send Ctrl + v') })
+    //    .catchErr('[flow]: Failed to sendKeys');
     editEl.getText().then(function(text){
         console.log("the edit area,s text is*********");
         console.log(text)
