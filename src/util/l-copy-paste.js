@@ -18,11 +18,11 @@ var fullCommand = (function(){
     return resultArr.join(' ');
 }());
 
-module.exports = function(url, callback){
+exports.copy = function(url, callback){
     if(process.platform != "linux"){
-        return new Error("your os is not supported");
+        callback(new Error("your os is not supported"));
     }
-    exec(fullCommand + url, options,
+    exec(fullCommand + ' ' + url, options,
         function (error, stdout, stderr) {
             console.log('stdout: ' + stdout);
             console.log('stderr: ' + stderr);
@@ -34,4 +34,4 @@ module.exports = function(url, callback){
             callback(null)
         }
     );
-};
+}
