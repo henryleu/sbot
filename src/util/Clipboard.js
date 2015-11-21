@@ -3,7 +3,7 @@ var fs = require('fs');
 var clipboard = {};
 var LMQ = require('l-mq');
 var queue = new LMQ(1);
-var copyToClipboard = require('./l-copy-paste');
+var copyToClipboard = require('bluebird').promisify(require('./l-copy-paste'));
 
 clipboard.copyImageByUrl = function(mediaUrl, callback){
     //TODO check image file's existence
