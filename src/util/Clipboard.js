@@ -19,7 +19,11 @@ clipboard.copyImageByUrl = function(mediaUrl, callback){
     });
 };
 function copyIt(url, callback){
-    exec('cat ' + url + ' | xclip -selection c', function(err){
+    exec('cat ' + url + ' | xclip -selection c',
+        {
+            timeout: 1000
+        },
+        function(err){
         if(err){
             console.error(err);
             callback(err)
