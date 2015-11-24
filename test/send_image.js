@@ -45,93 +45,17 @@ var editEl = driver.findElement(webdriver.By.css('#editArea'));
 driver.call(function(){
     console.log("ready to send");
 });
-//request once
-driver.call(function(){
-    return new webdriver.promise.Promise(function(resolve, reject){
-        requestOptions(function(err, res, body){
-            if(err){
-                console.error("Failed to request options");
-                console.error(err);
-                return reject(err)
-            }else{
-                console.info(body);
-                resolve()
-            }
-        })
-    })
-});
-driver.call(function(){
-    console.log("request 1 ok");
-});
-//request second
-driver.call(function(){
-    return new webdriver.promise.Promise(function(resolve, reject){
-        requestUpload(function(err, res, body){
-            if(err){
-                console.error("Failed to request options");
-                console.error(err);
-                return reject(err)
-            }else{
-                console.info(body);
-                resolve()
-            }
-        })
-    })
-});
-driver.call(function(){
-    console.log("request 2 ok");
-});
+
+var fileEl = driver.findElement(webdriver.By.name('file'));
+fileEl.sendKeys('http://download.sucaitianxia.com/yinxiaosucai/dongwu/%E7%89%9B%E8%9B%99.wav');
 
 driver.wait(webdriver.until.elementLocated(loadingLocator), 10000000000);
-var loadingNode = driver.findElement(loadingLocator);
-driver.wait(waitForLoadingHide(loadingNode), 5000);
-driver.wait(webdriver.until.elementLocated(imgLocator), 5000);
-driver.findElement(sendLocator).click();
+//var loadingNode = driver.findElement(loadingLocator);
+//driver.wait(waitForLoadingHide(loadingNode), 5000);
+//driver.wait(webdriver.until.elementLocated(imgLocator), 5000);
+//driver.findElement(sendLocator).click();
 driver.quit();
 
-function requestOptions(callback){
-    var requestHeader = {
-        "Accept-Encoding": "gzip, deflate, sdch",
-        "Access-Control-Request-Headers": "content-type",
-        "Access-Control-Request-Method": "POST",
-        Connection: "keep-alive",
-        Host: "file.wx.qq.com",
-        Origin: "https://wx.qq.com",
-        Referer: "https://wx.qq.com/?&lang=zh_CN"
-    };
-    request({
-        method: "OPTIONS",
-        url: "https://file.wx.qq.com/cgi-bin/mmwebwx-bin/webwxuploadmedia?f=json",
-        jar: j,
-        headers: requestHeader
-    }, callback)
-}
-function requestUpload(callback){
-    var file = "/Users/bjhl/dev/codebase/athena/public/uploads/upload_ffbcc160c4a2f0d1330987a198b6b5a8.jpg"
-    var requestHeader = {
-        "Accept-Encoding": "gzip, deflate",
-        "Access-Control-Request-Headers": "content-type",
-        "Access-Control-Request-Method": "POST",
-        Connection: "keep-alive",
-        "Content-Length": 38195,
-        "Content-Type": "multipart/form-data",
-        Host: "file.wx.qq.com",
-        Origin: "https://wx.qq.com",
-        Referer: "https://wx.qq.com/?&lang=zh_CN"
-    };
-    var count = 4;
-    var formData = {
-        id: "WU_FILE_" + (count++),
-        name: "untitled" + (count++),
-        uploadmediarequest: require('fs').createReadStream(file)
-    };
-    request.post({
-        url: "https://file.wx.qq.com/cgi-bin/mmwebwx-bin/webwxuploadmedia?f=json",
-        jar: j,
-        headers: requestHeader,
-        formData: formData
-    }, callback)
-}
 function waitForLoadingHide(loadingNode){
     var result = false;
     return function(){
