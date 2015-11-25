@@ -252,16 +252,15 @@ WcBot.prototype.contactListRemark = function(callback){
             }
             receiveReset(self, cb);
             list.forEach(function(contact){
-                if(contact.nickname.substr(0, 3) != 'bu-'){
-                    self.taskQueue.enqueue(completeProfileAsync, {args:[self, contact.nickname]}, function(err, data){
-                        if(err){
-                            console.log("[flow]: Failed to remark contact");
-                            console.warn(err);
-                        }else{
-                            self.emit('remarkcontact', {err: null, data: data})
-                        }
-                    });
-                }
+                self.readProfile(contact.nickname, function(err, data){
+                    data.botid = self.id;
+                    if(err){
+                        console.log("[flow]: Failed to get contact list");
+                        console.warn(err);
+                    }else{
+                        self.emit('contactprofile', {err: null, data: data})
+                    }
+                });
             });
         })
     }, null, callback);
