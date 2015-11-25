@@ -15,7 +15,7 @@ var spiderContactListInfo = require('../funcs/contact-list');
 var receiveReset = require('../funcs/reset-pointer');
 var _findOnePro = require('../funcs/find-one-contact');
 var readProfile = require('../funcs/read-profile').readProfile;
-var completeProfileAsync = require('../funcs/profile-complete');
+var reverseProfileAsync = require('../funcs/profile-reverse');
 var suggestFriendHandler = require('../funcs/friend-suggest-message');
 var _modifyRemarkAsync = require('../funcs/modify-user-remark');
 var receiveMessageHandler = require('../funcs/receive-message');
@@ -263,7 +263,7 @@ WcBot.prototype.contactListRemark = function(callback){
                         }
                     });
                 }else{
-                    self.taskQueue.enqueue(completeProfileAsync, {args:[self, contact.nickname]}, function(err, data){
+                    self.taskQueue.enqueue(reverseProfileAsync, {args:[self, contact.nickname]}, function(err, data){
                         if(err){
                             console.log("[flow]: Failed to remark contact");
                             console.warn(err);

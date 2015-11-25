@@ -47,6 +47,35 @@ exports.openPanel = function(self){
         })
 };
 
+exports.reverse = function(promise, data, self){
+    return self.driver.findElement({'css': 'div.meta_area p[contenteditable]'})
+        .then(function(itemp) {
+            return self.driver.sleep(200)
+                .then(function () {
+                    return itemp.click()
+                        .then(function () {
+                            return self.driver.executeScript('window.document.querySelector("div.meta_area p[contenteditable]").innerText = "";')
+                        })
+                        .then(function () {
+                            return self.driver.sleep(500)
+                        })
+                        .then(function () {
+                            return self.driver.executeScript('window.document.querySelector("div.meta_area p[contenteditable]").blur();')
+                        })
+                        .then(function () {
+                            return self.driver.findElement({css: '#mmpop_profile .avatar .img'})
+                                .then(function (img) {
+                                    return img.click();
+                                })
+                        })
+                        .then(function () {
+                            console.log("[flow]:clear remark ok");
+                            return self.driver.sleep(1000)
+                        })
+                })
+        })
+};
+
 exports.remark = function(promise, data, self){
     return self.driver.findElement({'css': 'div.meta_area p[contenteditable]'})
         .then(function(itemp) {
