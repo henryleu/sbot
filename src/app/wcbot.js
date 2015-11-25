@@ -259,7 +259,7 @@ WcBot.prototype.contactListRemark = function(callback){
                             console.warn(err);
                         }else{
                             data.botid = self.id;
-                            self.emit('contactprofile', {err: null, data: data})
+                            self.emit('remarkcontact', {err: null, data: data})
                         }
                     });
                 }else{
