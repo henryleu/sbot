@@ -109,7 +109,7 @@ function spiderContactList(self, contactArr){
                         return imgEl.getAttribute('src')
                             .then(function (src) {
                                 username = qs.parse(urlCore.parse(src).query).username;
-                                if (username.substr(0, 1) != "@" || hasUserName(contactArr, username)) {
+                                if (!username || username.substr(0, 1) != "@" || hasUserName(contactArr, username)) {
                                     return null
                                 } else {
                                     return contact.findElement({css: '.info .nickname'})
