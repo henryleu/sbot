@@ -61,18 +61,17 @@ module.exports = function(self, codeTmp, parentItem){
                 .then(function(){
                     return itemp.click()
                         .then(function(){
-                            return self.driver.executeScript('window.document.querySelector("div.meta_area p[contenteditable]").innerText = "";')
+                            return self.driver.findElement({css: 'div.meta_area p[contenteditable]'})
                         })
-                        .then(function(){
-                            return itemp.sendKeys(code)
+                        .then(function(remarkEl){
+                            return remarkEl.getText()
                         })
-                        .then(function(){
-                            return self.driver.sleep(500)
-                        })
-                        .then(function(){
-                            return self.driver.executeScript('window.document.querySelector("div.meta_area p[contenteditable]").blur();')
-                        })
-                        .then(function(){
+                        .then(function(remark){
+                            if(remark === '点击修改备注' || 'Click to edit alias'){
+                                code = nickName;
+                            } else {
+                                code = remark;
+                            }
                             return self.driver.findElement({css: '#mmpop_profile .avatar .img'})
                                 .then(function(img){
                                     return img.click();
