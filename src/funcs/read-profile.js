@@ -137,9 +137,11 @@ function readProfileChain(self, callback){
                 })
                 .then(function(bidtxt){
                     if(bidtxt === '点击修改备注'){
-                        return data.bid = bidtxt;
+                        console.info('[flow]: remark is empty');
+                        return data.bid = data.nickname;
                     }
-                    return data.bid = data.nickname;
+                    console.info('[flow]: remark is ' + data.nickname);
+                    return data.bid = bidtxt;
                 })
         })
         .then(function(){
