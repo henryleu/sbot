@@ -136,7 +136,7 @@ function readProfileChain(self, callback){
                     return bidItem.getText()
                 })
                 .then(function(bidtxt){
-                    if(bidtxt === '点击修改备注'){
+                    if(bidtxt === '点击修改备注' || 'Click to edit alias'){
                         console.info('[flow]: remark is empty');
                         return data.bid = data.nickname;
                     }
