@@ -1,28 +1,21 @@
 var webdriver= require('selenium-webdriver');
+var chromeDriver= require('selenium-webdriver/chrome');
 var Promise = require('bluebird');
 var co = require('co');
-var test1 = require('./test');
+var chromeCapabilities = webdriver.Capabilities.chrome();
+var options = new chromeDriver.Options();
+options.addArguments('--lang=en_US');
+options.setUserPreferences({'intl.accept_languages': 'zh_CN'});
+options.addArguments('--disable-user-media-security=true');
 var driver = new webdriver.Builder()
-    .withCapabilities(webdriver.Capabilities.chrome().setEnableNativeEvents(true))
+    .withCapabilities(options.toCapabilities())
+    .setControlFlow(new webdriver.promise.ControlFlow())
     .build();
     var result = null;
-    driver.get('http://www.baidu.com');
-    var input = driver.findElement({css: '#kw'});
-    input.sendKeys("ok");
-    driver.call(test, driver, 'lisi');
-    driver.call(function(){
-        console.log("ok")
-    });
-    driver.sleep(3000);
+    driver.get('http://wx.qq.com');
+    driver.sleep(30000000);
     driver.quit();
 
-function test(driver, opt2){
-    console.log(this)
-    console.log(opt2);
-    driver.call(function(){
-        console.log("222")
-    }, null, null);
-}
 //function thunkify(fn){
 //    var originFn = fn;
 //    return function(){

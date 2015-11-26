@@ -69,6 +69,7 @@ exports.reverse = function(promise, data, self){
                                 })
                         })
                         .then(function () {
+                            data.bid = data.nickname;
                             console.log("[flow]:clear remark ok");
                             return self.driver.sleep(1000)
                         })

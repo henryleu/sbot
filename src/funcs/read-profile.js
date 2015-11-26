@@ -136,7 +136,10 @@ function readProfileChain(self, callback){
                     return bidItem.getText()
                 })
                 .then(function(bidtxt){
-                    return data.bid = bidtxt;
+                    if(bidtxt === '点击修改备注'){
+                        return data.bid = bidtxt;
+                    }
+                    return data.bid = data.nickname;
                 })
         })
         .then(function(){
